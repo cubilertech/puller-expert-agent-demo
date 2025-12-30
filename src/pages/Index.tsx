@@ -124,33 +124,11 @@ export default function Index() {
         <main className="flex-1 flex flex-col overflow-hidden">
           {selectedTask ? (
             <>
-              {/* Workspace Split View */}
-              <div className="flex-1 flex overflow-hidden">
-                {/* Context Thread */}
-                <div className="w-1/2 border-r border-border overflow-hidden">
-                  <ContextThread
-                    messages={chatMessages}
-                    taskTitle={selectedTask.description}
-                  />
-                </div>
-
-                {/* Artifact Editor */}
-                <div className="w-1/2 overflow-hidden">
-                  <ArtifactEditor
-                    code={originalCode}
-                    onApprove={handleApprove}
-                    onOverride={handleOverride}
-                    isApproving={isApproving}
-                  />
-                </div>
-              </div>
-
-              {/* Bottom - Knowledge Graph */}
-              <div className="h-64 border-t border-border p-4">
-                <KnowledgeGraph
-                  nodes={knowledgeNodes}
-                  isLearning={isLearning}
-                  newNodeLabel={isLearning ? 'REVENUE_NULL_BEHAVIOR = ZERO' : undefined}
+              {/* Workspace - Context Thread Only */}
+              <div className="flex-1 overflow-hidden">
+                <ContextThread
+                  messages={chatMessages}
+                  taskTitle={selectedTask.description}
                 />
               </div>
             </>
