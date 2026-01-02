@@ -305,36 +305,6 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps)
           </AnimatePresence>
         </div>
       </Tabs>
-
-      {/* Footer Stats */}
-      <div className="p-3 border-t border-sidebar-border bg-muted/30">
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div>
-            <div className="text-lg font-semibold text-foreground">
-              {incomingCount}
-            </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Processing
-            </div>
-          </div>
-          <div>
-            <div className="text-lg font-semibold text-warning">
-              {reviewCount}
-            </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Review
-            </div>
-          </div>
-          <div>
-            <div className="text-lg font-semibold text-success">
-              {completedCount}
-            </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Done
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
