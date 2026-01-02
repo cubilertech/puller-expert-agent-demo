@@ -9,24 +9,33 @@ export const initialTasks: Task[] = [
     timestamp: new Date(Date.now() - 1000 * 60 * 2),
     priority: 'high',
     description: 'Which store has the highest monthly revenue across the dataset?',
+    source: 'email',
+    flags: { urgency: false, humanRequested: false, vip: true },
+    confidence: 68,
   },
   {
     id: 'task-2',
     title: '2025 Subscriber Conversion List',
     requestor: 'Growth Team',
-    status: 'pending',
+    status: 'reasoning',
     timestamp: new Date(Date.now() - 1000 * 60 * 15),
     priority: 'high',
     description: 'List of customers whose first purchase in 2025 was non-subscription, then became subscribers',
+    source: 'slack',
+    flags: { urgency: true, humanRequested: true, vip: false },
+    confidence: 82,
   },
   {
     id: 'task-3',
     title: 'LG Products Performance Analysis',
     requestor: 'Product Strategy',
-    status: 'pending',
+    status: 'planning',
     timestamp: new Date(Date.now() - 1000 * 60 * 45),
     priority: 'medium',
     description: 'Understanding why LG Products and Super Gloss Radial line are underperforming for repeat customers',
+    source: 'meeting',
+    flags: { urgency: false, humanRequested: false, vip: false },
+    confidence: 91,
   },
 ];
 
@@ -212,11 +221,11 @@ export const initialKnowledgeNodes: KnowledgeNode[] = [
 ];
 
 export const ghostTaskTemplates = [
-  { title: 'Customer LTV by Cohort', requestor: 'Finance', priority: 'high' as const },
-  { title: 'Subscription Churn Drivers', requestor: 'Retention Team', priority: 'high' as const },
-  { title: 'Promo Code Effectiveness', requestor: 'Marketing', priority: 'medium' as const },
-  { title: 'Inventory Reorder Analysis', requestor: 'Supply Chain', priority: 'low' as const },
-  { title: 'Shipping Cost Optimization', requestor: 'Operations', priority: 'medium' as const },
+  { title: 'Customer LTV by Cohort', requestor: 'Finance', priority: 'high' as const, source: 'email' as const, flags: { urgency: true, humanRequested: false, vip: true } },
+  { title: 'Subscription Churn Drivers', requestor: 'Retention Team', priority: 'high' as const, source: 'slack' as const, flags: { urgency: false, humanRequested: true, vip: false } },
+  { title: 'Promo Code Effectiveness', requestor: 'Marketing', priority: 'medium' as const, source: 'email' as const, flags: { urgency: false, humanRequested: false, vip: false } },
+  { title: 'Inventory Reorder Analysis', requestor: 'Supply Chain', priority: 'low' as const, source: 'meeting' as const, flags: { urgency: false, humanRequested: false, vip: false } },
+  { title: 'Shipping Cost Optimization', requestor: 'Operations', priority: 'medium' as const, source: 'slack' as const, flags: { urgency: true, humanRequested: false, vip: false } },
 ];
 
 // Task-specific data mapping

@@ -10,14 +10,22 @@ export function useSimulation(
 ) {
   const addGhostTask = useCallback(() => {
     const template = ghostTaskTemplates[Math.floor(Math.random() * ghostTaskTemplates.length)];
+    const statuses = ['ingesting', 'planning', 'reasoning', 'validating'] as const;
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    const sources = ['email', 'slack', 'meeting'] as const;
+    const randomSource = template.source || sources[Math.floor(Math.random() * sources.length)];
+    
     const newTask: Task = {
       id: `ghost-${taskCounter++}`,
       title: template.title,
       requestor: template.requestor,
-      status: 'pending',
+      status: randomStatus,
       timestamp: new Date(),
       priority: template.priority,
       description: `Auto-generated task: ${template.title}`,
+      source: randomSource,
+      flags: template.flags || { urgency: Math.random() > 0.7, humanRequested: Math.random() > 0.8, vip: Math.random() > 0.9 },
+      confidence: Math.floor(50 + Math.random() * 50),
     };
 
     setTasks((prev) => [newTask, ...prev]);
