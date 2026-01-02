@@ -84,13 +84,16 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps)
       <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
         <AnimatePresence mode="popLayout">
           {tasks.map((task, index) => {
-            const StatusIcon = statusConfig[task.status].icon;
-            const SourceIcon = sourceConfig[task.source].icon;
+            const statusInfo = statusConfig[task.status] || statusConfig.ingesting;
+            const sourceInfo = sourceConfig[task.source] || sourceConfig.email;
+            const StatusIcon = statusInfo.icon;
+            const SourceIcon = sourceInfo.icon;
             const isSelected = task.id === selectedTaskId;
             const isReview = task.status === 'review';
             const isProcessing = ['ingesting', 'planning', 'reasoning', 'validating'].includes(task.status);
             const currentStage = getStageIndex(task.status);
-            const lowConfidence = task.confidence < CONFIDENCE_THRESHOLD;
+            const lowConfidence = (task.confidence ?? 50) < CONFIDENCE_THRESHOLD;
+            const flags = task.flags || { urgency: false, humanRequested: false, vip: false };
 
             return (
               <motion.button
@@ -115,19 +118,19 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps)
                     {sourceConfig[task.source].label}
                   </span>
                   
-                  {task.flags.urgency && (
+                  {flags.urgency && (
                     <span className="flex items-center gap-0.5 text-[10px] text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
                       <Flame className="w-3 h-3" />
                       Urgent
                     </span>
                   )}
-                  {task.flags.humanRequested && (
+                  {flags.humanRequested && (
                     <span className="flex items-center gap-0.5 text-[10px] text-warning bg-warning/10 px-1.5 py-0.5 rounded">
                       <UserCheck className="w-3 h-3" />
                       Escalated
                     </span>
                   )}
-                  {task.flags.vip && (
+                  {flags.vip && (
                     <span className="flex items-center gap-0.5 text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                       <Crown className="w-3 h-3" />
                       VIP
@@ -139,7 +142,7 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps)
                   <StatusIcon
                     className={cn(
                       'w-4 h-4 mt-0.5 flex-shrink-0',
-                      statusConfig[task.status].color,
+                      statusInfo.color,
                       (task.status === 'learning' || isProcessing) && 'animate-spin'
                     )}
                   />
@@ -182,10 +185,10 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps)
                 <div className="mt-2 flex items-center gap-2">
                   <span className={cn(
                     'text-[10px] font-medium px-1.5 py-0.5 rounded uppercase tracking-wide',
-                    statusConfig[task.status].color,
+                    statusInfo.color,
                     isReview ? 'bg-warning/10' : 'bg-muted/50'
                   )}>
-                    {statusConfig[task.status].label}
+                    {statusInfo.label}
                   </span>
                   
                   {/* Confidence Score */}
