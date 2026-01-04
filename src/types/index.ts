@@ -1,4 +1,6 @@
-export type TaskStatus = 'ingesting' | 'planning' | 'reasoning' | 'validating' | 'review' | 'approved' | 'learning';
+export type TaskStatus = 'ingesting' | 'planning' | 'reasoning' | 'validating' | 'review' | 'sent' | 'approved' | 'learning';
+
+export type SentStatus = 'pending' | 'viewed' | 'awaiting_response';
 
 export type TaskSource = 'email' | 'slack' | 'meeting';
 
@@ -19,6 +21,7 @@ export interface Task {
   source: TaskSource;
   flags: TaskFlags;
   confidence: number; // 0-100, triggers review if below threshold
+  sentStatus?: SentStatus; // For sent tasks: pending, viewed, awaiting_response
 }
 
 export interface ChatMessage {

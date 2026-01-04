@@ -18,7 +18,7 @@ export function ControlTowerHeader({ taskCount, approvedCount, isLearning }: Con
           </div>
           <div>
             <h1 className="text-sm font-bold text-foreground tracking-tight">
-              EITL Control Tower
+              EITL Command Center
             </h1>
             <p className="text-[10px] text-muted-foreground -mt-0.5">
               Expert-in-the-Loop System
