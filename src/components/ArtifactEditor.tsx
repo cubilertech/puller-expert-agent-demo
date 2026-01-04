@@ -50,6 +50,7 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving }: Art
   const [isEditingAssumptions, setIsEditingAssumptions] = useState(false);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [isEditingQuery, setIsEditingQuery] = useState(false);
+  const [hasEditedQuery, setHasEditedQuery] = useState(false);
   const [assumptions, setAssumptions] = useState(defaultAssumptions);
   const [message, setMessage] = useState(defaultMessage);
   const [queryCode, setQueryCode] = useState(() => 
@@ -308,12 +309,34 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving }: Art
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => setIsEditingQuery(false)}
+                      onClick={() => {
+                        setIsEditingQuery(false);
+                        setHasEditedQuery(true);
+                      }}
                       className="text-xs h-7"
                     >
                       Save
                     </Button>
                   </div>
+                </div>
+              ) : hasEditedQuery ? (
+                <div className="bg-muted/20 rounded overflow-auto">
+                  <pre className="code-editor text-xs">
+                    <code>
+                      {queryCode.split('\n').map((line, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: index * 0.02 }}
+                          className="flex"
+                        >
+                          <span className="code-line-number">{index + 1}</span>
+                          <span className="flex-1">{line}</span>
+                        </motion.div>
+                      ))}
+                    </code>
+                  </pre>
                 </div>
               ) : (
                 <div className="bg-muted/20 rounded overflow-auto">
