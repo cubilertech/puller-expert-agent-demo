@@ -49,8 +49,12 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving }: Art
   const [viewMode, setViewMode] = useState<ViewMode>('code');
   const [isEditingAssumptions, setIsEditingAssumptions] = useState(false);
   const [isEditingMessage, setIsEditingMessage] = useState(false);
+  const [isEditingQuery, setIsEditingQuery] = useState(false);
   const [assumptions, setAssumptions] = useState(defaultAssumptions);
   const [message, setMessage] = useState(defaultMessage);
+  const [queryCode, setQueryCode] = useState(() => 
+    code.filter(line => line.type !== 'removed').map(line => line.content).join('\n')
+  );
   const [assumptionsExpanded, setAssumptionsExpanded] = useState(true);
   const [messageExpanded, setMessageExpanded] = useState(true);
   
@@ -259,52 +263,93 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving }: Art
           {viewMode === 'code' ? (
             <>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-muted-foreground">query.sql</span>
-                <button
-                  onClick={() => setShowDiff(!showDiff)}
-                  className={cn(
-                    'text-xs px-2 py-0.5 rounded transition-colors',
-                    showDiff 
-                      ? 'bg-primary/20 text-primary' 
-                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-muted-foreground">query.sql</span>
+                  {!isEditingQuery && (
+                    <button
+                      onClick={() => setIsEditingQuery(true)}
+                      className="p-1 hover:bg-muted rounded transition-colors"
+                      title="Edit query"
+                    >
+                      <Edit3 className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                    </button>
                   )}
-                >
-                  {showDiff ? 'Hide Diff' : 'Show Diff'}
-                </button>
+                </div>
+                {!isEditingQuery && (
+                  <button
+                    onClick={() => setShowDiff(!showDiff)}
+                    className={cn(
+                      'text-xs px-2 py-0.5 rounded transition-colors',
+                      showDiff 
+                        ? 'bg-primary/20 text-primary' 
+                        : 'bg-muted text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {showDiff ? 'Hide Diff' : 'Show Diff'}
+                  </button>
+                )}
               </div>
-              <div className="bg-muted/20 rounded overflow-auto">
-                <pre className="code-editor text-xs">
-                  <code>
-                    {code.map((line, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index * 0.02 }}
-                        className={cn(
-                          'flex',
-                          showDiff && line.type === 'added' && 'diff-added',
-                          showDiff && line.type === 'removed' && 'diff-removed'
-                        )}
-                      >
-                        <span className="code-line-number">{line.lineNumber}</span>
-                        <span className={cn(
-                          'flex-1',
-                          line.type === 'added' && 'text-success',
-                          line.type === 'removed' && 'text-destructive'
-                        )}>
-                          {showDiff && line.type !== 'unchanged' && (
-                            <span className="inline-block w-4 text-center opacity-50">
-                              {line.type === 'added' ? '+' : '-'}
-                            </span>
+              {isEditingQuery ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={queryCode}
+                    onChange={(e) => setQueryCode(e.target.value)}
+                    className="text-xs font-mono min-h-[200px] bg-muted/30 border-border"
+                    placeholder="Enter SQL query..."
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsEditingQuery(false)}
+                      className="text-xs h-7"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setIsEditingQuery(false)}
+                      className="text-xs h-7"
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-muted/20 rounded overflow-auto">
+                  <pre className="code-editor text-xs">
+                    <code>
+                      {code.map((line, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: index * 0.02 }}
+                          className={cn(
+                            'flex',
+                            showDiff && line.type === 'added' && 'diff-added',
+                            showDiff && line.type === 'removed' && 'diff-removed'
                           )}
-                          {line.content}
-                        </span>
-                      </motion.div>
-                    ))}
-                  </code>
-                </pre>
-              </div>
+                        >
+                          <span className="code-line-number">{line.lineNumber}</span>
+                          <span className={cn(
+                            'flex-1',
+                            line.type === 'added' && 'text-success',
+                            line.type === 'removed' && 'text-destructive'
+                          )}>
+                            {showDiff && line.type !== 'unchanged' && (
+                              <span className="inline-block w-4 text-center opacity-50">
+                                {line.type === 'added' ? '+' : '-'}
+                              </span>
+                            )}
+                            {line.content}
+                          </span>
+                        </motion.div>
+                      ))}
+                    </code>
+                  </pre>
+                </div>
+              )}
             </>
           ) : (
             <>
