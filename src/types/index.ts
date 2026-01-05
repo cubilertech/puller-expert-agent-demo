@@ -22,6 +22,8 @@ export interface Task {
   flags: TaskFlags;
   confidence: number; // 0-100, triggers review if below threshold
   sentStatus?: SentStatus; // For sent tasks: pending, viewed, awaiting_response
+  sentAt?: Date; // When the response was sent to requestor
+  requestorFeedback?: 'positive' | 'negative' | null; // Feedback from requestor
 }
 
 export interface ChatMessage {
