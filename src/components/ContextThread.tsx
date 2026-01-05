@@ -37,14 +37,24 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
         {messages.map((message, index) => {
           const { icon: Icon, color, label } = senderConfig[message.sender];
           
+          // Adaptive timing: first 3 messages slower, then accelerate
+          const baseDelay = index < 3 ? 0.18 : 0.1;
+          const cumulativeDelay = index < 3 
+            ? index * 0.18 
+            : (3 * 0.18) + (index - 3) * 0.1;
+          
           return (
             <motion.div
               key={message.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              initial={{ opacity: 0, y: -15, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ 
+                delay: cumulativeDelay,
+                duration: 0.4,
+                ease: [0.25, 0.46, 0.45, 0.94]
+              }}
               className={cn(
-                'rounded-lg p-3',
+                'rounded-lg p-3 message-reveal',
                 typeStyles[message.type]
               )}
             >
