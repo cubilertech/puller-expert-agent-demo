@@ -25,22 +25,28 @@ export default function Index() {
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
 
-  const handleApprove = useCallback(() => {
+  const handleSendToRequestor = useCallback(() => {
     if (!selectedTaskId) return;
 
     setIsApproving(true);
 
-    // Step 1: Show flying artifact after brief delay
+    // Move task to Active (waiting room) after brief delay
     setTimeout(() => {
-      setShowFlyingArtifact(true);
-      
-      // Update task status to learning
       setTasks((prev) =>
         prev.map((t) =>
-          t.id === selectedTaskId ? { ...t, status: 'learning' as const } : t
+          t.id === selectedTaskId 
+            ? { 
+                ...t, 
+                status: 'sent' as const, 
+                sentStatus: 'pending' as const,
+                sentAt: new Date()
+              } 
+            : t
         )
       );
-    }, 500);
+      setIsApproving(false);
+      setSelectedTaskId(null);
+    }, 800);
   }, [selectedTaskId]);
 
   const handleFlyingComplete = useCallback(() => {
@@ -134,9 +140,9 @@ export default function Index() {
               
               {/* Artifact Editor */}
               <div className="w-[480px] border-l border-border flex-shrink-0">
-                <ArtifactEditor
+              <ArtifactEditor
                   code={originalCode}
-                  onApprove={handleApprove}
+                  onApprove={handleSendToRequestor}
                   onOverride={handleOverride}
                   isApproving={isApproving}
                 />

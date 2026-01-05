@@ -1,11 +1,14 @@
 import { useEffect, useCallback } from 'react';
-import { Task, TaskStatus, CONFIDENCE_THRESHOLD } from '@/types';
+import { Task, TaskStatus, SentStatus, CONFIDENCE_THRESHOLD } from '@/types';
 import { ghostTaskTemplates } from '@/data/demoData';
 
 let taskCounter = 10;
 
 // Pipeline stages for automatic progression
 const processingStages: TaskStatus[] = ['ingesting', 'planning', 'reasoning', 'validating'];
+
+// Wait period before auto-advancing from Active to Done (in milliseconds)
+const WAIT_PERIOD_MS = 30000; // 30 seconds for demo
 
 export function useSimulation(
   enabled: boolean,
@@ -15,8 +18,8 @@ export function useSimulation(
   const progressTasks = useCallback(() => {
     setTasks((prev) =>
       prev.map((task) => {
-        // Skip tasks that are already completed
-        if (['review', 'approved', 'learning'].includes(task.status)) {
+        // Skip tasks that are already completed or in waiting room
+        if (['review', 'sent', 'approved', 'learning'].includes(task.status)) {
           return task;
         }
 
@@ -33,6 +36,44 @@ export function useSimulation(
         // Move to next stage
         if (currentIndex >= 0 && currentIndex < processingStages.length - 1) {
           return { ...task, status: processingStages[currentIndex + 1] };
+        }
+
+        return task;
+      })
+    );
+  }, [setTasks]);
+
+  // Simulate requestor feedback progression for sent tasks
+  const simulateFeedback = useCallback(() => {
+    setTasks((prev) =>
+      prev.map((task) => {
+        if (task.status !== 'sent' || !task.sentAt) return task;
+
+        const timeSinceSent = Date.now() - task.sentAt.getTime();
+
+        // Simulate viewing after 5-10 seconds
+        if (task.sentStatus === 'pending' && timeSinceSent > 5000 + Math.random() * 5000) {
+          return { ...task, sentStatus: 'viewed' as SentStatus };
+        }
+
+        // After wait period, auto-advance to approved (no news is good news)
+        if (timeSinceSent > WAIT_PERIOD_MS) {
+          return { 
+            ...task, 
+            status: 'approved' as TaskStatus,
+            requestorFeedback: 'positive' as const
+          };
+        }
+
+        // Small chance of negative feedback (returns to review)
+        if (task.sentStatus === 'viewed' && Math.random() < 0.02) {
+          return { 
+            ...task, 
+            status: 'review' as TaskStatus,
+            sentStatus: undefined,
+            sentAt: undefined,
+            requestorFeedback: 'negative' as const
+          };
         }
 
         return task;
@@ -74,11 +115,17 @@ export function useSimulation(
       progressTasks();
     }, 3000 + Math.random() * 2000);
 
+    // Check for feedback/wait period every 2 seconds
+    const feedbackInterval = setInterval(() => {
+      simulateFeedback();
+    }, 2000);
+
     return () => {
       clearInterval(addInterval);
       clearInterval(progressInterval);
+      clearInterval(feedbackInterval);
     };
-  }, [enabled, addGhostTask, progressTasks]);
+  }, [enabled, addGhostTask, progressTasks, simulateFeedback]);
 
   return { addGhostTask };
 }

@@ -69,6 +69,13 @@ function formatTimeAgo(date: Date): string {
   return `${hours}h ago`;
 }
 
+function formatWaitTime(sentAt: Date): string {
+  const seconds = Math.floor((Date.now() - sentAt.getTime()) / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}m`;
+}
+
 // Processing pipeline stages
 const pipelineStages: TaskStatus[] = ['ingesting', 'planning', 'reasoning', 'validating'];
 
@@ -220,7 +227,7 @@ function TaskItem({ task, index, isSelected, onSelect }: TaskItemProps) {
           {statusInfo.label}
         </span>
         
-        {/* Sent Status Badge */}
+        {/* Sent Status Badge with Wait Time */}
         {task.status === 'sent' && task.sentStatus && (
           <span className={cn(
             'text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1',
@@ -232,6 +239,11 @@ function TaskItem({ task, index, isSelected, onSelect }: TaskItemProps) {
               return <SentIcon className="w-3 h-3" />;
             })()}
             {sentStatusConfig[task.sentStatus].label}
+            {task.sentAt && (
+              <span className="text-muted-foreground ml-1">
+                ({formatWaitTime(task.sentAt)})
+              </span>
+            )}
           </span>
         )}
         

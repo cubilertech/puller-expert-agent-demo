@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, RefreshCw, FileCode, AlertTriangle, Edit3, Table, Code, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShieldCheck, RefreshCw, FileCode, AlertTriangle, Edit3, Table, Code, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { CodeDiff } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -447,15 +447,15 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving }: Art
                   onClick={onApprove}
                   className="w-full bg-success hover:bg-success/90 text-success-foreground flex items-center gap-2"
                 >
-                  <ShieldCheck className="w-4 h-4" />
-                  Approve & Send
+                  <Send className="w-4 h-4" />
+                  Send to Requestor
                 </Button>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          Approval will update the global knowledge context
+          Response will be sent to the requestor for verification
         </p>
       </div>
     </div>
