@@ -18,7 +18,8 @@ import {
   CircleDot,
   Send,
   Eye,
-  MessageCircle
+  MessageCircle,
+  Inbox
 } from 'lucide-react';
 import { Task, TaskStatus, TaskSource, SentStatus, CONFIDENCE_THRESHOLD } from '@/types';
 import { cn } from '@/lib/utils';
@@ -264,8 +265,8 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps)
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="flex flex-col flex-1 min-h-0">
         <TabsList className="mx-2 mt-2 grid grid-cols-3 bg-muted/50">
           <TabsTrigger value="active" className="text-xs gap-1.5 data-[state=active]:bg-background">
-            <Activity className="w-3.5 h-3.5" />
-            Active
+            <Inbox className="w-3.5 h-3.5" />
+            Incoming
             {activeCount > 0 && (
               <span className="ml-1 bg-primary/20 text-primary text-[10px] px-1.5 rounded-full">
                 {activeCount}
@@ -273,8 +274,8 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps)
             )}
           </TabsTrigger>
           <TabsTrigger value="sent" className="text-xs gap-1.5 data-[state=active]:bg-background">
-            <Send className="w-3.5 h-3.5" />
-            Sent
+            <Activity className="w-3.5 h-3.5" />
+            Active
             {sentCount > 0 && (
               <span className="ml-1 bg-info/20 text-info text-[10px] px-1.5 rounded-full">
                 {sentCount}
