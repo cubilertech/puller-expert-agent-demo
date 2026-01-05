@@ -11,7 +11,7 @@ interface ContextThreadProps {
 const senderConfig = {
   user: { icon: User, color: 'bg-primary', label: 'Requestor' },
   agent: { icon: Bot, color: 'bg-secondary', label: 'Puller Agent' },
-  system: { icon: Zap, color: 'bg-success', label: 'System' },
+  system: { icon: Zap, color: 'bg-warning', label: 'System' },
 };
 
 const typeStyles = {
