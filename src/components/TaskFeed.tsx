@@ -260,20 +260,6 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps)
 
   return (
     <div className="h-full flex flex-col bg-sidebar">
-      {/* Header */}
-      <div className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Activity className="w-5 h-5 text-primary" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-success rounded-full pulse-live" />
-          </div>
-          <h2 className="font-semibold text-foreground">The Pulse</h2>
-          <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {tasks.length} tasks
-          </span>
-        </div>
-      </div>
-
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="flex flex-col flex-1 min-h-0">
         <TabsList className="mx-2 mt-2 grid grid-cols-3 bg-muted/50">
