@@ -94,6 +94,12 @@ export default function Index() {
     console.log('Override requested');
   }, []);
 
+  const handleForceComplete = useCallback((taskId: string) => {
+    // Trigger the flying artifact animation and move to done
+    setSelectedTaskId(taskId);
+    setShowFlyingArtifact(true);
+  }, []);
+
   const handleDismissToast = useCallback(() => {
     setLearningSignal(null);
   }, []);
@@ -123,6 +129,7 @@ export default function Index() {
             tasks={tasks}
             selectedTaskId={selectedTaskId}
             onSelectTask={setSelectedTaskId}
+            onForceComplete={handleForceComplete}
           />
         </aside>
 

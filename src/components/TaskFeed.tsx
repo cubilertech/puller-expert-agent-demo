@@ -29,6 +29,7 @@ interface TaskFeedProps {
   tasks: Task[];
   selectedTaskId: string | null;
   onSelectTask: (taskId: string) => void;
+  onForceComplete?: (taskId: string) => void;
 }
 
 const statusConfig: Record<TaskStatus, { icon: typeof Activity; color: string; label: string }> = {
@@ -69,11 +70,17 @@ function formatTimeAgo(date: Date): string {
   return `${hours}h ago`;
 }
 
-function formatWaitTime(sentAt: Date): string {
-  const seconds = Math.floor((Date.now() - sentAt.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s`;
+function formatLapsedTime(sentAt: Date): string {
+  const ms = Date.now() - sentAt.getTime();
+  const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
-  return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (days > 0) return `${days} Day${days > 1 ? 's' : ''}`;
+  if (hours > 0) return `${hours}h`;
+  if (minutes > 0) return `${minutes}m`;
+  return `${seconds}s`;
 }
 
 // Processing pipeline stages
@@ -119,14 +126,16 @@ interface TaskItemProps {
   index: number;
   isSelected: boolean;
   onSelect: () => void;
+  onForceComplete?: () => void;
 }
 
-function TaskItem({ task, index, isSelected, onSelect }: TaskItemProps) {
+function TaskItem({ task, index, isSelected, onSelect, onForceComplete }: TaskItemProps) {
   const statusInfo = statusConfig[task.status] || statusConfig.ingesting;
   const sourceInfo = sourceConfig[task.source] || sourceConfig.email;
   const StatusIcon = statusInfo.icon;
   const SourceIcon = sourceInfo.icon;
   const isReview = task.status === 'review';
+  const isSent = task.status === 'sent';
   const isProcessing = ['ingesting', 'planning', 'reasoning', 'validating'].includes(task.status);
   const currentStage = getStageIndex(task.status);
   const lowConfidence = (task.confidence ?? 50) < CONFIDENCE_THRESHOLD;
@@ -227,23 +236,11 @@ function TaskItem({ task, index, isSelected, onSelect }: TaskItemProps) {
           {statusInfo.label}
         </span>
         
-        {/* Sent Status Badge with Wait Time */}
-        {task.status === 'sent' && task.sentStatus && (
-          <span className={cn(
-            'text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1',
-            sentStatusConfig[task.sentStatus].color,
-            'bg-muted/50'
-          )}>
-            {(() => {
-              const SentIcon = sentStatusConfig[task.sentStatus].icon;
-              return <SentIcon className="w-3 h-3" />;
-            })()}
-            {sentStatusConfig[task.sentStatus].label}
-            {task.sentAt && (
-              <span className="text-muted-foreground ml-1">
-                ({formatWaitTime(task.sentAt)})
-              </span>
-            )}
+        {/* Lapsed Time for Sent Tasks */}
+        {isSent && task.sentAt && (
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            Lapsed: {formatLapsedTime(task.sentAt)}
           </span>
         )}
         
@@ -255,11 +252,25 @@ function TaskItem({ task, index, isSelected, onSelect }: TaskItemProps) {
           {task.confidence}% conf
         </span>
       </div>
+
+      {/* Force Auto-Complete Button for Sent Tasks */}
+      {isSent && onForceComplete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onForceComplete();
+          }}
+          className="mt-2 w-full text-[10px] font-medium px-2 py-1.5 rounded bg-success/10 text-success hover:bg-success/20 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <Zap className="w-3 h-3" />
+          Force Auto-Complete
+        </button>
+      )}
     </motion.button>
   );
 }
 
-export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps) {
+export function TaskFeed({ tasks, selectedTaskId, onSelectTask, onForceComplete }: TaskFeedProps) {
   const [activeTab, setActiveTab] = useState<TabType>('active');
   
   const activeCount = tasks.filter(t => ['ingesting', 'planning', 'reasoning', 'validating', 'review'].includes(t.status)).length;
@@ -323,6 +334,7 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask }: TaskFeedProps)
                   index={index}
                   isSelected={task.id === selectedTaskId}
                   onSelect={() => onSelectTask(task.id)}
+                  onForceComplete={onForceComplete ? () => onForceComplete(task.id) : undefined}
                 />
               ))
             )}
