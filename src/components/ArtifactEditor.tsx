@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, RefreshCw, FileCode, AlertTriangle, Edit3, Table, Code, ChevronDown, ChevronUp, Send } from 'lucide-react';
+import { ShieldCheck, RefreshCw, FileCode, AlertTriangle, Edit3, Table, Code, ChevronDown, ChevronUp, Send, Plus, Sparkles, MessageSquare, X } from 'lucide-react';
 import { CodeDiff } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import {
   Table as UITable,
@@ -22,6 +24,19 @@ interface ArtifactEditorProps {
   hideActions?: boolean;
 }
 
+interface Assumption {
+  id: string;
+  text: string;
+  includeInMessage: boolean;
+}
+
+interface Comment {
+  id: string;
+  selection: string;
+  text: string;
+  position: number;
+}
+
 // Demo table data for the query result preview
 const demoTableData = [
   { store_name: 'Downtown Seattle', month: 'November', year: 2024, total_revenue: '$2,847,392' },
@@ -31,11 +46,13 @@ const demoTableData = [
   { store_name: 'Miami Beach', month: 'December', year: 2024, total_revenue: '$1,987,234' },
 ];
 
-const defaultAssumptions = `• Order value = pre-tax price + tax - discounts
-• Result is the highest revenue month by a single store
-• Year and Month sourced from "dim_date"
-• Store-level revenue attributed to "grouped_customer_store_name"
-• NULL values treated as zero (COALESCE applied)`;
+const defaultAssumptions: Assumption[] = [
+  { id: '1', text: 'Order value = pre-tax price + tax - discounts', includeInMessage: true },
+  { id: '2', text: 'Result is the highest revenue month by a single store', includeInMessage: true },
+  { id: '3', text: 'Year and Month sourced from "dim_date"', includeInMessage: false },
+  { id: '4', text: 'Store-level revenue attributed to "grouped_customer_store_name"', includeInMessage: false },
+  { id: '5', text: 'NULL values treated as zero (COALESCE applied)', includeInMessage: true },
+];
 
 const defaultMessage = `Here's the store with the highest monthly revenue:
 
@@ -47,20 +64,133 @@ type ViewMode = 'code' | 'table';
 
 export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideActions = false }: ArtifactEditorProps) {
   const [showDiff, setShowDiff] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('code');
-  const [isEditingAssumptions, setIsEditingAssumptions] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [isEditingQuery, setIsEditingQuery] = useState(false);
   const [hasEditedQuery, setHasEditedQuery] = useState(false);
-  const [assumptions, setAssumptions] = useState(defaultAssumptions);
+  const [assumptions, setAssumptions] = useState<Assumption[]>(defaultAssumptions);
   const [message, setMessage] = useState(defaultMessage);
   const [queryCode, setQueryCode] = useState(() => 
     code.filter(line => line.type !== 'removed').map(line => line.content).join('\n')
   );
   const [assumptionsExpanded, setAssumptionsExpanded] = useState(true);
   const [messageExpanded, setMessageExpanded] = useState(true);
+  const [queryExpanded, setQueryExpanded] = useState(false);
+  const [newAssumption, setNewAssumption] = useState('');
+  const [isAddingAssumption, setIsAddingAssumption] = useState(false);
+  const [isMicroLearning, setIsMicroLearning] = useState(false);
+  const [microLearningField, setMicroLearningField] = useState<string | null>(null);
+  
+  // Comment system state
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [selectedText, setSelectedText] = useState<string | null>(null);
+  const [showCommentInput, setShowCommentInput] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [commentPosition, setCommentPosition] = useState(0);
+  const messageRef = useRef<HTMLDivElement>(null);
   
   const hasChanges = code.some(line => line.type !== 'unchanged');
+
+  // Handle text selection for commenting
+  const handleTextSelect = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim().length > 0) {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      const containerRect = messageRef.current?.getBoundingClientRect();
+      
+      if (containerRect) {
+        setSelectedText(selection.toString());
+        setCommentPosition(rect.top - containerRect.top);
+        setShowCommentInput(true);
+      }
+    }
+  };
+
+  const handleAddComment = () => {
+    if (selectedText && newComment.trim()) {
+      const comment: Comment = {
+        id: `comment-${Date.now()}`,
+        selection: selectedText,
+        text: newComment,
+        position: commentPosition,
+      };
+      setComments([...comments, comment]);
+      setNewComment('');
+      setShowCommentInput(false);
+      setSelectedText(null);
+      window.getSelection()?.removeAllRanges();
+      
+      // Trigger micro-learning
+      triggerMicroLearning('comment');
+    }
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    setComments(comments.filter(c => c.id !== commentId));
+  };
+
+  const toggleAssumptionInMessage = (id: string) => {
+    setAssumptions(prev => 
+      prev.map(a => a.id === id ? { ...a, includeInMessage: !a.includeInMessage } : a)
+    );
+    triggerMicroLearning('assumptions');
+  };
+
+  const handleAddAssumption = () => {
+    if (newAssumption.trim()) {
+      const newItem: Assumption = {
+        id: `${Date.now()}`,
+        text: newAssumption.trim(),
+        includeInMessage: false,
+      };
+      setAssumptions([...assumptions, newItem]);
+      setNewAssumption('');
+      setIsAddingAssumption(false);
+      triggerMicroLearning('assumptions');
+    }
+  };
+
+  const handleRemoveAssumption = (id: string) => {
+    setAssumptions(assumptions.filter(a => a.id !== id));
+    triggerMicroLearning('assumptions');
+  };
+
+  const triggerMicroLearning = (field: string) => {
+    setIsMicroLearning(true);
+    setMicroLearningField(field);
+    
+    // Auto-dismiss after 2 seconds
+    setTimeout(() => {
+      setIsMicroLearning(false);
+      setMicroLearningField(null);
+    }, 2000);
+  };
+
+  const handleSaveMessage = () => {
+    setIsEditingMessage(false);
+    triggerMicroLearning('message');
+  };
+
+  const handleSaveQuery = () => {
+    setIsEditingQuery(false);
+    setHasEditedQuery(true);
+    triggerMicroLearning('query');
+  };
+
+  // Collapsible section animation variants
+  const collapseVariants = {
+    collapsed: { 
+      height: 0, 
+      opacity: 0,
+      transition: { duration: 0.25, ease: [0.4, 0, 0.2, 1] }
+    },
+    expanded: { 
+      height: 'auto', 
+      opacity: 1,
+      transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] }
+    }
+  } as const;
 
   return (
     <div className="h-full flex flex-col bg-background overflow-hidden">
@@ -70,32 +200,28 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
           <FileCode className="w-4 h-4 text-primary" />
           <h3 className="font-semibold text-sm text-foreground">Artifact Editor</h3>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setViewMode('code')}
-            className={cn(
-              'text-xs px-2 py-1 rounded transition-colors flex items-center gap-1',
-              viewMode === 'code' 
-                ? 'bg-primary/20 text-primary' 
-                : 'bg-muted text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Code className="w-3 h-3" />
-            Query
-          </button>
-          <button
-            onClick={() => setViewMode('table')}
-            className={cn(
-              'text-xs px-2 py-1 rounded transition-colors flex items-center gap-1',
-              viewMode === 'table' 
-                ? 'bg-primary/20 text-primary' 
-                : 'bg-muted text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Table className="w-3 h-3" />
-            Preview
-          </button>
-        </div>
+        
+        {/* Micro-learning indicator */}
+        <AnimatePresence>
+          {isMicroLearning && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, x: 20 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.9, x: 20 }}
+              className="flex items-center gap-1.5 px-2 py-1 bg-primary/15 border border-primary/30 rounded-full"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+              >
+                <Sparkles className="w-3 h-3 text-primary" />
+              </motion.div>
+              <span className="text-[10px] text-primary font-medium">
+                Processing {microLearningField}...
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Expert Note */}
@@ -110,89 +236,15 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-auto scrollbar-thin">
-        {/* Editable Assumptions Section */}
-        <div className="border-b border-border">
-          <button
-            onClick={() => setAssumptionsExpanded(!assumptionsExpanded)}
-            className="w-full px-3 py-2 flex items-center justify-between hover:bg-muted/30 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Assumptions</span>
-              {!isEditingAssumptions && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsEditingAssumptions(true);
-                    setAssumptionsExpanded(true);
-                  }}
-                  className="p-1 hover:bg-muted rounded transition-colors"
-                  title="Edit assumptions"
-                >
-                  <Edit3 className="w-3 h-3 text-muted-foreground hover:text-foreground" />
-                </button>
-              )}
-            </div>
-            {assumptionsExpanded ? (
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            )}
-          </button>
-          <AnimatePresence>
-            {assumptionsExpanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="px-3 pb-3">
-                  {isEditingAssumptions ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        value={assumptions}
-                        onChange={(e) => setAssumptions(e.target.value)}
-                        className="text-xs font-mono min-h-[100px] bg-muted/30 border-border"
-                        placeholder="Enter assumptions..."
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsEditingAssumptions(false)}
-                          className="text-xs h-7"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => setIsEditingAssumptions(false)}
-                          className="text-xs h-7"
-                        >
-                          Save
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/20 rounded p-2">
-                      {assumptions}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Editable Message Section */}
+        {/* MAIN: Response Message Section (Prominent) */}
         <div className="border-b border-border">
           <button
             onClick={() => setMessageExpanded(!messageExpanded)}
-            className="w-full px-3 py-2 flex items-center justify-between hover:bg-muted/30 transition-colors"
+            className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-muted/30 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Response Message</span>
+              <Send className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold text-foreground">Response Message</span>
               {!isEditingMessage && (
                 <button
                   onClick={(e) => {
@@ -207,28 +259,29 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                 </button>
               )}
             </div>
-            {messageExpanded ? (
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
-            ) : (
+            <motion.div
+              animate={{ rotate: messageExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            )}
+            </motion.div>
           </button>
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {messageExpanded && (
               <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                initial="collapsed"
+                animate="expanded"
+                exit="collapsed"
+                variants={collapseVariants}
                 className="overflow-hidden"
               >
-                <div className="px-3 pb-3">
+                <div className="px-3 pb-3 relative" ref={messageRef}>
                   {isEditingMessage ? (
                     <div className="space-y-2">
                       <Textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        className="text-xs min-h-[120px] bg-muted/30 border-border"
+                        className="text-sm min-h-[140px] bg-muted/30 border-border"
                         placeholder="Enter response message..."
                       />
                       <div className="flex gap-2">
@@ -242,7 +295,7 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                         </Button>
                         <Button
                           size="sm"
-                          onClick={() => setIsEditingMessage(false)}
+                          onClick={handleSaveMessage}
                           className="text-xs h-7"
                         >
                           Save
@@ -250,9 +303,202 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                       </div>
                     </div>
                   ) : (
-                    <div className="text-xs text-foreground whitespace-pre-wrap bg-muted/20 rounded p-2">
-                      {message}
+                    <div className="flex gap-3">
+                      <div 
+                        className="flex-1 text-sm text-foreground whitespace-pre-wrap bg-card/80 rounded-lg p-3 border border-border cursor-text"
+                        onMouseUp={handleTextSelect}
+                      >
+                        {message}
+                      </div>
+                      
+                      {/* Comments sidebar */}
+                      {comments.length > 0 && (
+                        <div className="w-48 space-y-2">
+                          {comments.map((comment) => (
+                            <motion.div
+                              key={comment.id}
+                              initial={{ opacity: 0, x: 20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
+                            >
+                              <button
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-2.5 h-2.5 text-muted-foreground" />
+                              </button>
+                              <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
+                              <div className="text-foreground">{comment.text}</div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
                     </div>
+                  )}
+                  
+                  {/* Comment input popover */}
+                  <AnimatePresence>
+                    {showCommentInput && selectedText && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute right-3 top-0 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
+                        style={{ top: Math.max(commentPosition, 0) }}
+                      >
+                        <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
+                          <MessageSquare className="w-3 h-3" />
+                          Add comment
+                        </div>
+                        <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
+                          "{selectedText}"
+                        </div>
+                        <Textarea
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          placeholder="Your comment..."
+                          className="text-xs min-h-[60px] mb-2"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setShowCommentInput(false);
+                              setSelectedText(null);
+                              window.getSelection()?.removeAllRanges();
+                            }}
+                            className="text-xs h-6 flex-1"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleAddComment}
+                            className="text-xs h-6 flex-1"
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Assumptions Section with Checkboxes */}
+        <div className="border-b border-border">
+          <button
+            onClick={() => setAssumptionsExpanded(!assumptionsExpanded)}
+            className="w-full px-3 py-2 flex items-center justify-between hover:bg-muted/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Assumptions</span>
+              <span className="text-[10px] text-muted-foreground/60">
+                ({assumptions.filter(a => a.includeInMessage).length} in message)
+              </span>
+            </div>
+            <motion.div
+              animate={{ rotate: assumptionsExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </motion.div>
+          </button>
+          <AnimatePresence initial={false}>
+            {assumptionsExpanded && (
+              <motion.div
+                initial="collapsed"
+                animate="expanded"
+                exit="collapsed"
+                variants={collapseVariants}
+                className="overflow-hidden"
+              >
+                <div className="px-3 pb-3 space-y-1.5">
+                  {assumptions.map((assumption, index) => (
+                    <motion.div
+                      key={assumption.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.03 }}
+                      className="flex items-start gap-2 group"
+                    >
+                      <Checkbox
+                        id={assumption.id}
+                        checked={assumption.includeInMessage}
+                        onCheckedChange={() => toggleAssumptionInMessage(assumption.id)}
+                        className="mt-0.5"
+                      />
+                      <label
+                        htmlFor={assumption.id}
+                        className={cn(
+                          "text-xs cursor-pointer flex-1 transition-colors",
+                          assumption.includeInMessage ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {assumption.text}
+                      </label>
+                      <button
+                        onClick={() => handleRemoveAssumption(assumption.id)}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/20 rounded transition-all"
+                      >
+                        <X className="w-3 h-3 text-destructive" />
+                      </button>
+                    </motion.div>
+                  ))}
+                  
+                  {/* Add new assumption */}
+                  {isAddingAssumption ? (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="flex items-center gap-2 mt-2"
+                    >
+                      <Input
+                        value={newAssumption}
+                        onChange={(e) => setNewAssumption(e.target.value)}
+                        placeholder="New assumption..."
+                        className="text-xs h-7 flex-1"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleAddAssumption();
+                          if (e.key === 'Escape') {
+                            setIsAddingAssumption(false);
+                            setNewAssumption('');
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleAddAssumption}
+                        className="text-xs h-7 px-2"
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setIsAddingAssumption(false);
+                          setNewAssumption('');
+                        }}
+                        className="text-xs h-7 px-2"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    <button
+                      onClick={() => setIsAddingAssumption(true)}
+                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors mt-2"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add assumption
+                    </button>
                   )}
                 </div>
               </motion.div>
@@ -260,150 +506,207 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
           </AnimatePresence>
         </div>
 
-        {/* Code / Table View */}
-        <div className="p-3">
-          {viewMode === 'code' ? (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-muted-foreground">query.sql</span>
-                  {!isEditingQuery && (
-                    <button
-                      onClick={() => setIsEditingQuery(true)}
-                      className="p-1 hover:bg-muted rounded transition-colors"
-                      title="Edit query"
-                    >
-                      <Edit3 className="w-3 h-3 text-muted-foreground hover:text-foreground" />
-                    </button>
+        {/* Query / Table View (Collapsible) */}
+        <div className="border-b border-border">
+          <button
+            onClick={() => setQueryExpanded(!queryExpanded)}
+            className="w-full px-3 py-2 flex items-center justify-between hover:bg-muted/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Query</span>
+              <div className="flex items-center gap-1 ml-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setViewMode('table');
+                  }}
+                  className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1',
+                    viewMode === 'table' 
+                      ? 'bg-primary/20 text-primary' 
+                      : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <Table className="w-2.5 h-2.5" />
+                  Preview
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setViewMode('code');
+                  }}
+                  className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1',
+                    viewMode === 'code' 
+                      ? 'bg-primary/20 text-primary' 
+                      : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <Code className="w-2.5 h-2.5" />
+                  SQL
+                </button>
+              </div>
+            </div>
+            <motion.div
+              animate={{ rotate: queryExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </motion.div>
+          </button>
+          <AnimatePresence initial={false}>
+            {queryExpanded && (
+              <motion.div
+                initial="collapsed"
+                animate="expanded"
+                exit="collapsed"
+                variants={collapseVariants}
+                className="overflow-hidden"
+              >
+                <div className="px-3 pb-3">
+                  {viewMode === 'code' ? (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-muted-foreground">query.sql</span>
+                          {!isEditingQuery && (
+                            <button
+                              onClick={() => setIsEditingQuery(true)}
+                              className="p-1 hover:bg-muted rounded transition-colors"
+                              title="Edit query"
+                            >
+                              <Edit3 className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                            </button>
+                          )}
+                        </div>
+                        {!isEditingQuery && (
+                          <button
+                            onClick={() => setShowDiff(!showDiff)}
+                            className={cn(
+                              'text-xs px-2 py-0.5 rounded transition-colors',
+                              showDiff 
+                                ? 'bg-primary/20 text-primary' 
+                                : 'bg-muted text-muted-foreground hover:text-foreground'
+                            )}
+                          >
+                            {showDiff ? 'Hide Diff' : 'Show Diff'}
+                          </button>
+                        )}
+                      </div>
+                      {isEditingQuery ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={queryCode}
+                            onChange={(e) => setQueryCode(e.target.value)}
+                            className="text-xs font-mono min-h-[200px] bg-muted/30 border-border"
+                            placeholder="Enter SQL query..."
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setIsEditingQuery(false)}
+                              className="text-xs h-7"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveQuery}
+                              className="text-xs h-7"
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        </div>
+                      ) : hasEditedQuery ? (
+                        <div className="bg-muted/20 rounded overflow-auto">
+                          <pre className="code-editor text-xs">
+                            <code>
+                              {queryCode.split('\n').map((line, index) => (
+                                <motion.div
+                                  key={index}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ delay: index * 0.02 }}
+                                  className="flex"
+                                >
+                                  <span className="code-line-number">{index + 1}</span>
+                                  <span className="flex-1">{line}</span>
+                                </motion.div>
+                              ))}
+                            </code>
+                          </pre>
+                        </div>
+                      ) : (
+                        <div className="bg-muted/20 rounded overflow-auto">
+                          <pre className="code-editor text-xs">
+                            <code>
+                              {code.map((line, index) => (
+                                <motion.div
+                                  key={index}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ delay: index * 0.02 }}
+                                  className={cn(
+                                    'flex',
+                                    showDiff && line.type === 'added' && 'diff-added',
+                                    showDiff && line.type === 'removed' && 'diff-removed'
+                                  )}
+                                >
+                                  <span className="code-line-number">{line.lineNumber}</span>
+                                  <span className={cn(
+                                    'flex-1',
+                                    line.type === 'added' && 'text-success',
+                                    line.type === 'removed' && 'text-destructive'
+                                  )}>
+                                    {showDiff && line.type !== 'unchanged' && (
+                                      <span className="inline-block w-4 text-center opacity-50">
+                                        {line.type === 'added' ? '+' : '-'}
+                                      </span>
+                                    )}
+                                    {line.content}
+                                  </span>
+                                </motion.div>
+                              ))}
+                            </code>
+                          </pre>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-mono text-muted-foreground">Result Preview (5 rows)</span>
+                      </div>
+                      <div className="bg-muted/20 rounded overflow-auto border border-border">
+                        <UITable>
+                          <TableHeader>
+                            <TableRow className="border-border">
+                              <TableHead className="text-xs h-8 px-2">store_name</TableHead>
+                              <TableHead className="text-xs h-8 px-2">month</TableHead>
+                              <TableHead className="text-xs h-8 px-2">year</TableHead>
+                              <TableHead className="text-xs h-8 px-2 text-right">total_revenue</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {demoTableData.map((row, index) => (
+                              <TableRow key={index} className="border-border">
+                                <TableCell className="text-xs py-2 px-2 font-medium">{row.store_name}</TableCell>
+                                <TableCell className="text-xs py-2 px-2">{row.month}</TableCell>
+                                <TableCell className="text-xs py-2 px-2">{row.year}</TableCell>
+                                <TableCell className="text-xs py-2 px-2 text-right font-mono text-success">{row.total_revenue}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </UITable>
+                      </div>
+                    </>
                   )}
                 </div>
-                {!isEditingQuery && (
-                  <button
-                    onClick={() => setShowDiff(!showDiff)}
-                    className={cn(
-                      'text-xs px-2 py-0.5 rounded transition-colors',
-                      showDiff 
-                        ? 'bg-primary/20 text-primary' 
-                        : 'bg-muted text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    {showDiff ? 'Hide Diff' : 'Show Diff'}
-                  </button>
-                )}
-              </div>
-              {isEditingQuery ? (
-                <div className="space-y-2">
-                  <Textarea
-                    value={queryCode}
-                    onChange={(e) => setQueryCode(e.target.value)}
-                    className="text-xs font-mono min-h-[200px] bg-muted/30 border-border"
-                    placeholder="Enter SQL query..."
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsEditingQuery(false)}
-                      className="text-xs h-7"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setIsEditingQuery(false);
-                        setHasEditedQuery(true);
-                      }}
-                      className="text-xs h-7"
-                    >
-                      Save
-                    </Button>
-                  </div>
-                </div>
-              ) : hasEditedQuery ? (
-                <div className="bg-muted/20 rounded overflow-auto">
-                  <pre className="code-editor text-xs">
-                    <code>
-                      {queryCode.split('\n').map((line, index) => (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: index * 0.02 }}
-                          className="flex"
-                        >
-                          <span className="code-line-number">{index + 1}</span>
-                          <span className="flex-1">{line}</span>
-                        </motion.div>
-                      ))}
-                    </code>
-                  </pre>
-                </div>
-              ) : (
-                <div className="bg-muted/20 rounded overflow-auto">
-                  <pre className="code-editor text-xs">
-                    <code>
-                      {code.map((line, index) => (
-                        <motion.div
-                          key={index}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: index * 0.02 }}
-                          className={cn(
-                            'flex',
-                            showDiff && line.type === 'added' && 'diff-added',
-                            showDiff && line.type === 'removed' && 'diff-removed'
-                          )}
-                        >
-                          <span className="code-line-number">{line.lineNumber}</span>
-                          <span className={cn(
-                            'flex-1',
-                            line.type === 'added' && 'text-success',
-                            line.type === 'removed' && 'text-destructive'
-                          )}>
-                            {showDiff && line.type !== 'unchanged' && (
-                              <span className="inline-block w-4 text-center opacity-50">
-                                {line.type === 'added' ? '+' : '-'}
-                              </span>
-                            )}
-                            {line.content}
-                          </span>
-                        </motion.div>
-                      ))}
-                    </code>
-                  </pre>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-muted-foreground">Result Preview (5 rows)</span>
-              </div>
-              <div className="bg-muted/20 rounded overflow-auto border border-border">
-                <UITable>
-                  <TableHeader>
-                    <TableRow className="border-border">
-                      <TableHead className="text-xs h-8 px-2">store_name</TableHead>
-                      <TableHead className="text-xs h-8 px-2">month</TableHead>
-                      <TableHead className="text-xs h-8 px-2">year</TableHead>
-                      <TableHead className="text-xs h-8 px-2 text-right">total_revenue</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {demoTableData.map((row, index) => (
-                      <TableRow key={index} className="border-border">
-                        <TableCell className="text-xs py-2 px-2 font-medium">{row.store_name}</TableCell>
-                        <TableCell className="text-xs py-2 px-2">{row.month}</TableCell>
-                        <TableCell className="text-xs py-2 px-2">{row.year}</TableCell>
-                        <TableCell className="text-xs py-2 px-2 text-right font-mono text-success">{row.total_revenue}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </UITable>
-              </div>
-            </>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

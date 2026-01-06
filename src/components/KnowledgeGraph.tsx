@@ -51,7 +51,7 @@ export function KnowledgeGraph({ nodes, isLearning, newNodeLabel }: KnowledgeGra
           'w-4 h-4 transition-colors',
           isLearning ? 'text-success animate-pulse' : 'text-primary'
         )} />
-        <h3 className="font-semibold text-sm text-foreground">Knowledge Context</h3>
+        <h3 className="font-semibold text-sm text-foreground">Context Graph</h3>
         {isLearning && (
           <motion.div
             initial={{ opacity: 0, scale: 0 }}
