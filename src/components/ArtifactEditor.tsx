@@ -19,6 +19,7 @@ interface ArtifactEditorProps {
   onApprove: () => void;
   onOverride: () => void;
   isApproving: boolean;
+  hideActions?: boolean;
 }
 
 // Demo table data for the query result preview
@@ -44,7 +45,7 @@ This was calculated by summing all order values (pre-tax price + tax - discounts
 
 type ViewMode = 'code' | 'table';
 
-export function ArtifactEditor({ code, onApprove, onOverride, isApproving }: ArtifactEditorProps) {
+export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideActions = false }: ArtifactEditorProps) {
   const [showDiff, setShowDiff] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('code');
   const [isEditingAssumptions, setIsEditingAssumptions] = useState(false);
@@ -406,58 +407,60 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving }: Art
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="p-3 border-t border-border bg-card/50 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onOverride}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Override
-          </Button>
-          <AnimatePresence mode="wait">
-            {isApproving ? (
-              <motion.div
-                key="approving"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex-1 flex items-center justify-center gap-2 h-9 bg-success/20 rounded-md"
-              >
+      {/* Actions - hidden when task is in Active state */}
+      {!hideActions && (
+        <div className="p-3 border-t border-border bg-card/50 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOverride}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Override
+            </Button>
+            <AnimatePresence mode="wait">
+              {isApproving ? (
                 <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                  key="approving"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="flex-1 flex items-center justify-center gap-2 h-9 bg-success/20 rounded-md"
                 >
-                  <ShieldCheck className="w-4 h-4 text-success" />
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                  >
+                    <ShieldCheck className="w-4 h-4 text-success" />
+                  </motion.div>
+                  <span className="text-sm text-success font-medium">Processing...</span>
                 </motion.div>
-                <span className="text-sm text-success font-medium">Processing...</span>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="approve"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex-1"
-              >
-                <Button
-                  onClick={onApprove}
-                  className="w-full bg-success hover:bg-success/90 text-success-foreground flex items-center gap-2"
+              ) : (
+                <motion.div
+                  key="approve"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="flex-1"
                 >
-                  <Send className="w-4 h-4" />
-                  Send to Requestor
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <Button
+                    onClick={onApprove}
+                    className="w-full bg-success hover:bg-success/90 text-success-foreground flex items-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    Send to Requestor
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Response will be sent to the requestor for verification
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground mt-2 text-center">
-          Response will be sent to the requestor for verification
-        </p>
-      </div>
+      )}
     </div>
   );
 }

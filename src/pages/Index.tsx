@@ -152,6 +152,7 @@ export default function Index() {
                   onApprove={handleSendToRequestor}
                   onOverride={handleOverride}
                   isApproving={isApproving}
+                  hideActions={selectedTask.status === 'sent' || selectedTask.status === 'approved'}
                 />
               </div>
             </div>
