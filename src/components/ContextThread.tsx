@@ -17,7 +17,7 @@ const senderConfig = {
 const typeStyles = {
   text: 'bg-card',
   reasoning: 'bg-accent/50 border-l-2 border-primary/30',
-  action: 'bg-success/10 border-l-2 border-success/50',
+  action: 'bg-warning/10 border-l-2 border-warning/50',
 };
 
 export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
@@ -80,7 +80,7 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                 )}
                 {message.type === 'action' && (
                   <div className="mt-2 flex items-center gap-1">
-                    <span className="text-[10px] text-success bg-success/10 px-2 py-0.5 rounded">
+                    <span className="text-[10px] text-warning bg-warning/10 px-2 py-0.5 rounded">
                       ACTION REQUIRED
                     </span>
                   </div>
