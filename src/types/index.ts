@@ -32,6 +32,7 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   type: 'text' | 'reasoning' | 'action';
+  assumptions?: string[]; // Nested assumptions within a response
 }
 
 export interface CodeDiff {
