@@ -94,6 +94,7 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
   const [selectedText, setSelectedText] = useState<string | null>(null);
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [commentPopoverPosition, setCommentPopoverPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [commentPosition, setCommentPosition] = useState(0);
   const [activeCommentSection, setActiveCommentSection] = useState<CommentSection>('message');
   const [activeCommentTargetId, setActiveCommentTargetId] = useState<string | undefined>();
@@ -142,6 +143,11 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
       if (containerRect) {
         setSelectedText(selection.toString());
         setCommentPosition(rect.top - containerRect.top);
+        // Set fixed position for popover near the selection
+        setCommentPopoverPosition({
+          top: rect.bottom + 8, // 8px below selection
+          left: Math.min(rect.left, window.innerWidth - 240) // Ensure popover doesn't overflow right
+        });
         setActiveCommentSection(section);
         setActiveCommentTargetId(targetId);
         setShowCommentInput(true);
@@ -457,55 +463,6 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                       )}
                     </div>
                   )}
-                  
-                  {/* Comment input popover */}
-                  <AnimatePresence>
-                    {showCommentInput && selectedText && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute right-3 top-0 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
-                        style={{ top: Math.max(commentPosition, 0) }}
-                      >
-                        <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
-                          <MessageSquare className="w-3 h-3" />
-                          Add comment
-                        </div>
-                        <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
-                          "{selectedText}"
-                        </div>
-                        <Textarea
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          placeholder="Your comment..."
-                          className="text-xs min-h-[60px] mb-2"
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setShowCommentInput(false);
-                              setSelectedText(null);
-                              window.getSelection()?.removeAllRanges();
-                            }}
-                            className="text-xs h-6 flex-1"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleAddComment}
-                            className="text-xs h-6 flex-1"
-                          >
-                            Add
-                          </Button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
               </motion.div>
             )}
@@ -667,56 +624,6 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                       </div>
                     )}
                   </div>
-                  
-                  {/* Comment input popover for assumptions */}
-                  <AnimatePresence>
-                    {showCommentInput && selectedText && activeCommentSection === 'assumption' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute right-3 top-0 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
-                        style={{ top: Math.max(commentPosition, 0) }}
-                      >
-                        <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
-                          <MessageSquare className="w-3 h-3" />
-                          Add comment
-                        </div>
-                        <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
-                          "{selectedText}"
-                        </div>
-                        <Textarea
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          placeholder="Your comment..."
-                          className="text-xs min-h-[60px] mb-2"
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setShowCommentInput(false);
-                              setSelectedText(null);
-                              setActiveCommentTargetId(undefined);
-                              window.getSelection()?.removeAllRanges();
-                            }}
-                            className="text-xs h-6 flex-1"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleAddComment}
-                            className="text-xs h-6 flex-1"
-                          >
-                            Add
-                          </Button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
               </motion.div>
             )}
@@ -985,54 +892,6 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                           )}
                           
                           {/* Comment input popover for SQL */}
-                          <AnimatePresence>
-                            {showCommentInput && selectedText && activeCommentSection === 'sql' && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="absolute right-3 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
-                                style={{ top: Math.max(commentPosition, 0) }}
-                              >
-                                <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
-                                  <MessageSquare className="w-3 h-3" />
-                                  Add comment
-                                </div>
-                                <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
-                                  "{selectedText}"
-                                </div>
-                                <Textarea
-                                  value={newComment}
-                                  onChange={(e) => setNewComment(e.target.value)}
-                                  placeholder="Your comment..."
-                                  className="text-xs min-h-[60px] mb-2"
-                                  autoFocus
-                                />
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setShowCommentInput(false);
-                                      setSelectedText(null);
-                                      setActiveCommentTargetId(undefined);
-                                      window.getSelection()?.removeAllRanges();
-                                    }}
-                                    className="text-xs h-6 flex-1"
-                                  >
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={handleAddComment}
-                                    className="text-xs h-6 flex-1"
-                                  >
-                                    Add
-                                  </Button>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </div>
                       ) : (
                         <div className="flex gap-3 relative">
@@ -1101,56 +960,6 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                               ))}
                             </div>
                           )}
-                          
-                          {/* Comment input popover for SQL */}
-                          <AnimatePresence>
-                            {showCommentInput && selectedText && activeCommentSection === 'sql' && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="absolute right-3 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
-                                style={{ top: Math.max(commentPosition, 0) }}
-                              >
-                                <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
-                                  <MessageSquare className="w-3 h-3" />
-                                  Add comment
-                                </div>
-                                <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
-                                  "{selectedText}"
-                                </div>
-                                <Textarea
-                                  value={newComment}
-                                  onChange={(e) => setNewComment(e.target.value)}
-                                  placeholder="Your comment..."
-                                  className="text-xs min-h-[60px] mb-2"
-                                  autoFocus
-                                />
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setShowCommentInput(false);
-                                      setSelectedText(null);
-                                      setActiveCommentTargetId(undefined);
-                                      window.getSelection()?.removeAllRanges();
-                                    }}
-                                    className="text-xs h-6 flex-1"
-                                  >
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={handleAddComment}
-                                    className="text-xs h-6 flex-1"
-                                  >
-                                    Add
-                                  </Button>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
                         </div>
                       )}
                     </>
@@ -1225,56 +1034,6 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                           </div>
                         )}
                       </div>
-                      
-                      {/* Comment input popover for table */}
-                      <AnimatePresence>
-                        {showCommentInput && selectedText && activeCommentSection === 'table' && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="absolute right-3 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
-                            style={{ top: Math.max(commentPosition + 40, 40) }}
-                          >
-                            <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
-                              <MessageSquare className="w-3 h-3" />
-                              Add comment
-                            </div>
-                            <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
-                              "{selectedText}"
-                            </div>
-                            <Textarea
-                              value={newComment}
-                              onChange={(e) => setNewComment(e.target.value)}
-                              placeholder="Your comment..."
-                              className="text-xs min-h-[60px] mb-2"
-                              autoFocus
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setShowCommentInput(false);
-                                  setSelectedText(null);
-                                  setActiveCommentTargetId(undefined);
-                                  window.getSelection()?.removeAllRanges();
-                                }}
-                                className="text-xs h-6 flex-1"
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={handleAddComment}
-                                className="text-xs h-6 flex-1"
-                              >
-                                Add
-                              </Button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
                     </>
                   )}
                 </div>
@@ -1338,6 +1097,59 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
           </p>
         </div>
       )}
+      
+      {/* Global Comment Input Popover - Fixed position, high z-index */}
+      <AnimatePresence>
+        {showCommentInput && selectedText && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed w-56 bg-card border border-border rounded-lg p-3 shadow-xl z-[9999]"
+            style={{ 
+              top: Math.min(commentPopoverPosition.top, window.innerHeight - 200),
+              left: commentPopoverPosition.left
+            }}
+          >
+            <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
+              <MessageSquare className="w-3 h-3" />
+              Add comment
+            </div>
+            <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
+              "{selectedText}"
+            </div>
+            <Textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Your comment..."
+              className="text-xs min-h-[60px] mb-2 bg-muted/50"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowCommentInput(false);
+                  setSelectedText(null);
+                  setActiveCommentTargetId(undefined);
+                  window.getSelection()?.removeAllRanges();
+                }}
+                className="text-xs h-6 flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleAddComment}
+                className="text-xs h-6 flex-1"
+              >
+                Add
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
