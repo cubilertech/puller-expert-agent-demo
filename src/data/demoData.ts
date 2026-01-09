@@ -153,6 +153,23 @@ export const task3Messages: ChatMessage[] = [
   },
 ];
 
+// SQL annotations for side comments
+export interface SqlAnnotation {
+  lineStart: number;
+  lineEnd: number;
+  title: string;
+  description: string;
+  type: 'selection' | 'source' | 'aggregation' | 'filter' | 'grouping' | 'ordering' | 'expert';
+}
+
+export const originalCodeAnnotations: SqlAnnotation[] = [
+  { lineStart: 1, lineEnd: 4, title: 'Column Selection', description: 'Selecting store name, month, year from dimensional tables for grouping', type: 'selection' },
+  { lineStart: 5, lineEnd: 6, title: 'Revenue Calculation', description: 'Expert added COALESCE to handle NULL values, treating them as zero per user preference', type: 'expert' },
+  { lineStart: 7, lineEnd: 9, title: 'Data Sources', description: 'Joining fact_sales with store and date dimensions for enriched context', type: 'source' },
+  { lineStart: 10, lineEnd: 13, title: 'Grouping', description: 'Aggregating at store + month + year level for monthly revenue comparison', type: 'grouping' },
+  { lineStart: 14, lineEnd: 15, title: 'Result Ordering', description: 'Returning only the top store-month by revenue descending', type: 'ordering' },
+];
+
 export const originalCode: CodeDiff[] = [
   { lineNumber: 1, type: 'unchanged', content: 'SELECT' },
   { lineNumber: 2, type: 'unchanged', content: '    ds.grouped_customer_store_name AS store_name,' },
@@ -169,6 +186,13 @@ export const originalCode: CodeDiff[] = [
   { lineNumber: 13, type: 'unchanged', content: '    dd.year' },
   { lineNumber: 14, type: 'unchanged', content: 'ORDER BY total_revenue DESC' },
   { lineNumber: 15, type: 'unchanged', content: 'LIMIT 1;' },
+];
+
+export const task2CodeAnnotations: SqlAnnotation[] = [
+  { lineStart: 1, lineEnd: 9, title: 'First Purchase CTE', description: 'Identifies each customer\'s first non-subscription order in 2025 with positive value', type: 'filter' },
+  { lineStart: 6, lineEnd: 7, title: 'NULL Handling', description: 'Expert added COALESCE for price calculations to handle missing discount values', type: 'expert' },
+  { lineStart: 10, lineEnd: 12, title: 'Customer Details', description: 'Simplified output per user preference - only essential columns returned', type: 'selection' },
+  { lineStart: 13, lineEnd: 16, title: 'Conversion Filter', description: 'Joining to subscriptions and filtering where subscription started after first purchase', type: 'filter' },
 ];
 
 export const task2Code: CodeDiff[] = [
@@ -188,6 +212,13 @@ export const task2Code: CodeDiff[] = [
   { lineNumber: 14, type: 'unchanged', content: 'JOIN first_purchases fp ON c.customer_id = fp.customer_id' },
   { lineNumber: 15, type: 'unchanged', content: 'JOIN subscriptions s ON c.customer_id = s.customer_id' },
   { lineNumber: 16, type: 'unchanged', content: 'WHERE s.subscription_start_date > fp.first_order_date;' },
+];
+
+export const task3CodeAnnotations: SqlAnnotation[] = [
+  { lineStart: 1, lineEnd: 1, title: 'Analysis Header', description: 'Complex multi-part analysis for LG product performance investigation', type: 'selection' },
+  { lineStart: 2, lineEnd: 7, title: 'Cohort Medians CTE', description: 'Calculates median days between repeat purchases for each cohort to establish baseline', type: 'aggregation' },
+  { lineStart: 8, lineEnd: 12, title: 'Pull-Forward Flag', description: 'Expert added pull-forward indicator comparing customer\'s gap to their cohort median', type: 'expert' },
+  { lineStart: 13, lineEnd: 17, title: 'July 4th Filter', description: 'Filtering to repeat customers (2+ purchases) who purchased on July 4th', type: 'filter' },
 ];
 
 export const task3Code: CodeDiff[] = [
@@ -229,20 +260,23 @@ export const ghostTaskTemplates = [
 ];
 
 // Task-specific data mapping
-export const taskDataMap: Record<string, { messages: ChatMessage[], code: CodeDiff[], knowledgeUpdate: string }> = {
+export const taskDataMap: Record<string, { messages: ChatMessage[], code: CodeDiff[], annotations: SqlAnnotation[], knowledgeUpdate: string }> = {
   'task-1': {
     messages: chatMessages,
     code: originalCode,
+    annotations: originalCodeAnnotations,
     knowledgeUpdate: 'REVENUE_NULL_BEHAVIOR = ZERO (Universal fact for technical users)',
   },
   'task-2': {
     messages: task2Messages,
     code: task2Code,
+    annotations: task2CodeAnnotations,
     knowledgeUpdate: 'USER_PREFERENCE: Return specific answer only, no additional metadata unless requested',
   },
   'task-3': {
     messages: task3Messages,
     code: task3Code,
+    annotations: task3CodeAnnotations,
     knowledgeUpdate: 'DEFINITIONS_STRENGTHENED: Pull-forward, cohort median, repeat customer criteria',
   },
 };

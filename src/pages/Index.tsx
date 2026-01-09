@@ -8,7 +8,7 @@ import { LearningToast } from '@/components/LearningToast';
 import { ControlTowerHeader } from '@/components/ControlTowerHeader';
 import { useSimulation } from '@/hooks/useSimulation';
 import { Task, KnowledgeNode, LearningSignal } from '@/types';
-import { initialTasks, chatMessages, originalCode, initialKnowledgeNodes } from '@/data/demoData';
+import { initialTasks, chatMessages, originalCode, initialKnowledgeNodes, taskDataMap, originalCodeAnnotations } from '@/data/demoData';
 
 export default function Index() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -24,6 +24,7 @@ export default function Index() {
   useSimulation(true, setTasks);
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
+  const taskData = selectedTaskId ? taskDataMap[selectedTaskId] : null;
 
   const handleSendToRequestor = useCallback(() => {
     if (!selectedTaskId) return;
@@ -147,8 +148,9 @@ export default function Index() {
               
               {/* Artifact Editor */}
               <div className="w-[480px] border-l border-border flex-shrink-0">
-              <ArtifactEditor
-                  code={originalCode}
+                <ArtifactEditor
+                  code={taskData?.code || originalCode}
+                  annotations={taskData?.annotations || originalCodeAnnotations}
                   onApprove={handleSendToRequestor}
                   onOverride={handleOverride}
                   isApproving={isApproving}

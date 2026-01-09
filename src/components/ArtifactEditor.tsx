@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, RefreshCw, FileCode, AlertTriangle, Edit3, Table, Code, ChevronDown, ChevronUp, Send, Plus, Sparkles, MessageSquare, X } from 'lucide-react';
+import { ShieldCheck, RefreshCw, FileCode, AlertTriangle, Edit3, Table, Code, ChevronDown, ChevronUp, Send, Plus, Sparkles, MessageSquare, X, Maximize2, Minimize2, Lightbulb } from 'lucide-react';
 import { CodeDiff } from '@/types';
+import { SqlAnnotation } from '@/data/demoData';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import {
 
 interface ArtifactEditorProps {
   code: CodeDiff[];
+  annotations?: SqlAnnotation[];
   onApprove: () => void;
   onOverride: () => void;
   isApproving: boolean;
@@ -62,7 +64,7 @@ This was calculated by summing all order values (pre-tax price + tax - discounts
 
 type ViewMode = 'code' | 'table';
 
-export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideActions = false }: ArtifactEditorProps) {
+export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, isApproving, hideActions = false }: ArtifactEditorProps) {
   const [showDiff, setShowDiff] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isEditingMessage, setIsEditingMessage] = useState(false);
@@ -80,6 +82,8 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
   const [isAddingAssumption, setIsAddingAssumption] = useState(false);
   const [isMicroLearning, setIsMicroLearning] = useState(false);
   const [microLearningField, setMicroLearningField] = useState<string | null>(null);
+  const [isQueryExpanded, setIsQueryExpanded] = useState(false);
+  const [hoveredAnnotation, setHoveredAnnotation] = useState<number | null>(null);
   
   // Comment system state
   const [comments, setComments] = useState<Comment[]>([]);
@@ -90,6 +94,31 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
   const messageRef = useRef<HTMLDivElement>(null);
   
   const hasChanges = code.some(line => line.type !== 'unchanged');
+  
+  // Compute which annotation applies to each line
+  const lineAnnotationMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    annotations.forEach((ann, idx) => {
+      for (let line = ann.lineStart; line <= ann.lineEnd; line++) {
+        map[line] = idx;
+      }
+    });
+    return map;
+  }, [annotations]);
+  
+  // Get annotation type colors
+  const getAnnotationColor = (type: string) => {
+    switch (type) {
+      case 'expert': return 'border-warning bg-warning/10 text-warning';
+      case 'selection': return 'border-primary bg-primary/10 text-primary';
+      case 'source': return 'border-cyan-500 bg-cyan-500/10 text-cyan-400';
+      case 'aggregation': return 'border-violet-500 bg-violet-500/10 text-violet-400';
+      case 'filter': return 'border-orange-500 bg-orange-500/10 text-orange-400';
+      case 'grouping': return 'border-emerald-500 bg-emerald-500/10 text-emerald-400';
+      case 'ordering': return 'border-pink-500 bg-pink-500/10 text-pink-400';
+      default: return 'border-muted bg-muted/20 text-muted-foreground';
+    }
+  };
 
   // Handle text selection for commenting
   const handleTextSelect = () => {
@@ -507,7 +536,7 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
         </div>
 
         {/* Query / Table View (Collapsible) */}
-        <div className="border-b border-border">
+        <div className={cn("border-b border-border", isQueryExpanded && "flex-1 flex flex-col")}>
           <button
             onClick={() => setQueryExpanded(!queryExpanded)}
             className="w-full px-3 py-2 flex items-center justify-between hover:bg-muted/30 transition-colors"
@@ -519,6 +548,7 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                   onClick={(e) => {
                     e.stopPropagation();
                     setViewMode('table');
+                    setIsQueryExpanded(false);
                   }}
                   className={cn(
                     'text-[10px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1',
@@ -534,6 +564,7 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                   onClick={(e) => {
                     e.stopPropagation();
                     setViewMode('code');
+                    setQueryExpanded(true);
                   }}
                   className={cn(
                     'text-[10px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1',
@@ -546,6 +577,25 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                   SQL
                 </button>
               </div>
+              {viewMode === 'code' && annotations.length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsQueryExpanded(!isQueryExpanded);
+                    setQueryExpanded(true);
+                  }}
+                  className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded transition-colors flex items-center gap-1 ml-1',
+                    isQueryExpanded 
+                      ? 'bg-warning/20 text-warning' 
+                      : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+                  )}
+                  title={isQueryExpanded ? 'Collapse annotated view' : 'Expand with annotations'}
+                >
+                  {isQueryExpanded ? <Minimize2 className="w-2.5 h-2.5" /> : <Maximize2 className="w-2.5 h-2.5" />}
+                  {isQueryExpanded ? 'Compact' : 'Annotated'}
+                </button>
+              )}
             </div>
             <motion.div
               animate={{ rotate: queryExpanded ? 180 : 0 }}
@@ -561,15 +611,15 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                 animate="expanded"
                 exit="collapsed"
                 variants={collapseVariants}
-                className="overflow-hidden"
+                className={cn("overflow-hidden", isQueryExpanded && "flex-1")}
               >
-                <div className="px-3 pb-3">
+                <div className={cn("px-3 pb-3", isQueryExpanded && "h-full flex flex-col")}>
                   {viewMode === 'code' ? (
                     <>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-mono text-muted-foreground">query.sql</span>
-                          {!isEditingQuery && (
+                          {!isEditingQuery && !isQueryExpanded && (
                             <button
                               onClick={() => setIsEditingQuery(true)}
                               className="p-1 hover:bg-muted rounded transition-colors"
@@ -579,7 +629,7 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                             </button>
                           )}
                         </div>
-                        {!isEditingQuery && (
+                        {!isEditingQuery && !isQueryExpanded && (
                           <button
                             onClick={() => setShowDiff(!showDiff)}
                             className={cn(
@@ -593,6 +643,7 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                           </button>
                         )}
                       </div>
+                      
                       {isEditingQuery ? (
                         <div className="space-y-2">
                           <Textarea
@@ -617,6 +668,88 @@ export function ArtifactEditor({ code, onApprove, onOverride, isApproving, hideA
                             >
                               Save
                             </Button>
+                          </div>
+                        </div>
+                      ) : isQueryExpanded && annotations.length > 0 ? (
+                        // Expanded annotated SQL view
+                        <div className="flex gap-4 flex-1 min-h-[300px]">
+                          {/* SQL Code Panel */}
+                          <div className="flex-1 bg-muted/20 rounded overflow-auto border border-border">
+                            <pre className="code-editor text-xs">
+                              <code>
+                                {code.map((line, index) => {
+                                  const annotationIdx = lineAnnotationMap[line.lineNumber];
+                                  const annotation = annotationIdx !== undefined ? annotations[annotationIdx] : null;
+                                  const isHighlighted = hoveredAnnotation !== null && annotationIdx === hoveredAnnotation;
+                                  
+                                  return (
+                                    <motion.div
+                                      key={index}
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      transition={{ delay: index * 0.02 }}
+                                      className={cn(
+                                        'flex transition-colors duration-150',
+                                        showDiff && line.type === 'added' && 'diff-added',
+                                        showDiff && line.type === 'removed' && 'diff-removed',
+                                        isHighlighted && 'bg-warning/20'
+                                      )}
+                                      onMouseEnter={() => annotationIdx !== undefined && setHoveredAnnotation(annotationIdx)}
+                                      onMouseLeave={() => setHoveredAnnotation(null)}
+                                    >
+                                      <span className="code-line-number">{line.lineNumber}</span>
+                                      <span className={cn(
+                                        'flex-1',
+                                        line.type === 'added' && 'text-success',
+                                        line.type === 'removed' && 'text-destructive'
+                                      )}>
+                                        {showDiff && line.type !== 'unchanged' && (
+                                          <span className="inline-block w-4 text-center opacity-50">
+                                            {line.type === 'added' ? '+' : '-'}
+                                          </span>
+                                        )}
+                                        {line.content}
+                                      </span>
+                                    </motion.div>
+                                  );
+                                })}
+                              </code>
+                            </pre>
+                          </div>
+                          
+                          {/* Annotations Panel */}
+                          <div className="w-64 space-y-2 overflow-auto">
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
+                              <Lightbulb className="w-3.5 h-3.5" />
+                              <span className="font-medium">Query Annotations</span>
+                            </div>
+                            {annotations.map((annotation, idx) => (
+                              <motion.div
+                                key={idx}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className={cn(
+                                  'p-2.5 rounded-lg border-l-2 transition-all duration-150 cursor-pointer',
+                                  getAnnotationColor(annotation.type),
+                                  hoveredAnnotation === idx && 'ring-1 ring-current scale-[1.02]'
+                                )}
+                                onMouseEnter={() => setHoveredAnnotation(idx)}
+                                onMouseLeave={() => setHoveredAnnotation(null)}
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide">
+                                    {annotation.title}
+                                  </span>
+                                  <span className="text-[9px] opacity-60 font-mono">
+                                    L{annotation.lineStart}{annotation.lineEnd !== annotation.lineStart && `-${annotation.lineEnd}`}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] leading-relaxed opacity-80">
+                                  {annotation.description}
+                                </p>
+                              </motion.div>
+                            ))}
                           </div>
                         </div>
                       ) : hasEditedQuery ? (
