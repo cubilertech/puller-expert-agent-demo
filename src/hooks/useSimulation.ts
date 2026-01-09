@@ -28,9 +28,19 @@ export function useSimulation(
         // If at the last processing stage (validating), decide outcome
         if (currentIndex === processingStages.length - 1) {
           const confidence = task.confidence ?? 50;
-          // Below threshold → Expert Review, otherwise → Approved
-          const newStatus: TaskStatus = confidence < CONFIDENCE_THRESHOLD ? 'review' : 'approved';
-          return { ...task, status: newStatus };
+          // Below threshold → Expert Review (stays in Incoming for human review)
+          // Above threshold → Sent (moves to Active tab, waiting for requestor)
+          if (confidence < CONFIDENCE_THRESHOLD) {
+            return { ...task, status: 'review' as TaskStatus };
+          } else {
+            // All tasks leaving Incoming land in Active (sent status)
+            return { 
+              ...task, 
+              status: 'sent' as TaskStatus,
+              sentStatus: 'pending' as SentStatus,
+              sentAt: new Date()
+            };
+          }
         }
 
         // Move to next stage
