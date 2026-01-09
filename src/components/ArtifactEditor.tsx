@@ -32,8 +32,12 @@ interface Assumption {
   includeInMessage: boolean;
 }
 
+type CommentSection = 'message' | 'assumption' | 'table' | 'sql';
+
 interface Comment {
   id: string;
+  section: CommentSection;
+  targetId?: string; // For assumptions: assumption id, for table: row index, for sql: line number
   selection: string;
   text: string;
   position: number;
@@ -91,7 +95,12 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [commentPosition, setCommentPosition] = useState(0);
+  const [activeCommentSection, setActiveCommentSection] = useState<CommentSection>('message');
+  const [activeCommentTargetId, setActiveCommentTargetId] = useState<string | undefined>();
   const messageRef = useRef<HTMLDivElement>(null);
+  const assumptionsRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const sqlRef = useRef<HTMLDivElement>(null);
   
   const hasChanges = code.some(line => line.type !== 'unchanged');
   
@@ -121,16 +130,19 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
   };
 
   // Handle text selection for commenting
-  const handleTextSelect = () => {
+  const handleTextSelect = (section: CommentSection, targetId?: string, containerRef?: React.RefObject<HTMLDivElement>) => {
     const selection = window.getSelection();
     if (selection && selection.toString().trim().length > 0) {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
-      const containerRect = messageRef.current?.getBoundingClientRect();
+      const ref = containerRef || messageRef;
+      const containerRect = ref.current?.getBoundingClientRect();
       
       if (containerRect) {
         setSelectedText(selection.toString());
         setCommentPosition(rect.top - containerRect.top);
+        setActiveCommentSection(section);
+        setActiveCommentTargetId(targetId);
         setShowCommentInput(true);
       }
     }
@@ -140,6 +152,8 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
     if (selectedText && newComment.trim()) {
       const comment: Comment = {
         id: `comment-${Date.now()}`,
+        section: activeCommentSection,
+        targetId: activeCommentTargetId,
         selection: selectedText,
         text: newComment,
         position: commentPosition,
@@ -148,11 +162,17 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
       setNewComment('');
       setShowCommentInput(false);
       setSelectedText(null);
+      setActiveCommentTargetId(undefined);
       window.getSelection()?.removeAllRanges();
       
       // Trigger micro-learning
       triggerMicroLearning('comment');
     }
+  };
+
+  // Get comments for a specific section
+  const getCommentsForSection = (section: CommentSection, targetId?: string) => {
+    return comments.filter(c => c.section === section && (targetId ? c.targetId === targetId : true));
   };
 
   const handleDeleteComment = (commentId: string) => {
@@ -335,15 +355,15 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                     <div className="flex gap-3">
                       <div 
                         className="flex-1 text-sm text-foreground whitespace-pre-wrap bg-card/80 rounded-lg p-3 border border-border cursor-text"
-                        onMouseUp={handleTextSelect}
+                        onMouseUp={() => handleTextSelect('message')}
                       >
                         {message}
                       </div>
                       
-                      {/* Comments sidebar */}
-                      {comments.length > 0 && (
+                      {/* Comments sidebar for message */}
+                      {getCommentsForSection('message').length > 0 && (
                         <div className="w-48 space-y-2">
-                          {comments.map((comment) => (
+                          {getCommentsForSection('message').map((comment) => (
                             <motion.div
                               key={comment.id}
                               initial={{ opacity: 0, x: 20 }}
@@ -447,88 +467,174 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                 variants={collapseVariants}
                 className="overflow-hidden"
               >
-                <div className="px-3 pb-3 space-y-1.5">
-                  {assumptions.map((assumption, index) => (
-                    <motion.div
-                      key={assumption.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      className="flex items-start gap-2 group"
-                    >
-                      <Checkbox
-                        id={assumption.id}
-                        checked={assumption.includeInMessage}
-                        onCheckedChange={() => toggleAssumptionInMessage(assumption.id)}
-                        className="mt-0.5"
-                      />
-                      <label
-                        htmlFor={assumption.id}
-                        className={cn(
-                          "text-xs cursor-pointer flex-1 transition-colors",
-                          assumption.includeInMessage ? "text-foreground" : "text-muted-foreground"
-                        )}
-                      >
-                        {assumption.text}
-                      </label>
-                      <button
-                        onClick={() => handleRemoveAssumption(assumption.id)}
-                        className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/20 rounded transition-all"
-                      >
-                        <X className="w-3 h-3 text-destructive" />
-                      </button>
-                    </motion.div>
-                  ))}
+                <div className="px-3 pb-3 relative" ref={assumptionsRef}>
+                  <div className="flex gap-3">
+                    <div className="flex-1 space-y-1.5">
+                      {assumptions.map((assumption, index) => {
+                        const assumptionComments = getCommentsForSection('assumption', assumption.id);
+                        return (
+                          <motion.div
+                            key={assumption.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                            className="flex items-start gap-2 group"
+                          >
+                            <Checkbox
+                              id={assumption.id}
+                              checked={assumption.includeInMessage}
+                              onCheckedChange={() => toggleAssumptionInMessage(assumption.id)}
+                              className="mt-0.5"
+                            />
+                            <label
+                              htmlFor={assumption.id}
+                              className={cn(
+                                "text-xs cursor-pointer flex-1 transition-colors select-text",
+                                assumption.includeInMessage ? "text-foreground" : "text-muted-foreground"
+                              )}
+                              onMouseUp={() => handleTextSelect('assumption', assumption.id, assumptionsRef)}
+                            >
+                              {assumption.text}
+                            </label>
+                            {assumptionComments.length > 0 && (
+                              <span className="text-[10px] text-warning bg-warning/10 px-1.5 py-0.5 rounded-full">
+                                {assumptionComments.length}
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleRemoveAssumption(assumption.id)}
+                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/20 rounded transition-all"
+                            >
+                              <X className="w-3 h-3 text-destructive" />
+                            </button>
+                          </motion.div>
+                        );
+                      })}
+                      
+                      {/* Add new assumption */}
+                      {isAddingAssumption ? (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="flex items-center gap-2 mt-2"
+                        >
+                          <Input
+                            value={newAssumption}
+                            onChange={(e) => setNewAssumption(e.target.value)}
+                            placeholder="New assumption..."
+                            className="text-xs h-7 flex-1"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAddAssumption();
+                              if (e.key === 'Escape') {
+                                setIsAddingAssumption(false);
+                                setNewAssumption('');
+                              }
+                            }}
+                          />
+                          <Button
+                            size="sm"
+                            onClick={handleAddAssumption}
+                            className="text-xs h-7 px-2"
+                          >
+                            Add
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setIsAddingAssumption(false);
+                              setNewAssumption('');
+                            }}
+                            className="text-xs h-7 px-2"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </motion.div>
+                      ) : (
+                        <button
+                          onClick={() => setIsAddingAssumption(true)}
+                          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors mt-2"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add assumption
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Comments sidebar for assumptions */}
+                    {getCommentsForSection('assumption').length > 0 && (
+                      <div className="w-44 space-y-2">
+                        {getCommentsForSection('assumption').map((comment) => (
+                          <motion.div
+                            key={comment.id}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
+                          >
+                            <button
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-2.5 h-2.5 text-muted-foreground" />
+                            </button>
+                            <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
+                            <div className="text-foreground">{comment.text}</div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   
-                  {/* Add new assumption */}
-                  {isAddingAssumption ? (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="flex items-center gap-2 mt-2"
-                    >
-                      <Input
-                        value={newAssumption}
-                        onChange={(e) => setNewAssumption(e.target.value)}
-                        placeholder="New assumption..."
-                        className="text-xs h-7 flex-1"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleAddAssumption();
-                          if (e.key === 'Escape') {
-                            setIsAddingAssumption(false);
-                            setNewAssumption('');
-                          }
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={handleAddAssumption}
-                        className="text-xs h-7 px-2"
+                  {/* Comment input popover for assumptions */}
+                  <AnimatePresence>
+                    {showCommentInput && selectedText && activeCommentSection === 'assumption' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute right-3 top-0 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
+                        style={{ top: Math.max(commentPosition, 0) }}
                       >
-                        Add
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setIsAddingAssumption(false);
-                          setNewAssumption('');
-                        }}
-                        className="text-xs h-7 px-2"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </motion.div>
-                  ) : (
-                    <button
-                      onClick={() => setIsAddingAssumption(true)}
-                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors mt-2"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Add assumption
-                    </button>
-                  )}
+                        <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
+                          <MessageSquare className="w-3 h-3" />
+                          Add comment
+                        </div>
+                        <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
+                          "{selectedText}"
+                        </div>
+                        <Textarea
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          placeholder="Your comment..."
+                          className="text-xs min-h-[60px] mb-2"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setShowCommentInput(false);
+                              setSelectedText(null);
+                              setActiveCommentTargetId(undefined);
+                              window.getSelection()?.removeAllRanges();
+                            }}
+                            className="text-xs h-6 flex-1"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleAddComment}
+                            className="text-xs h-6 flex-1"
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </motion.div>
             )}
@@ -753,57 +859,207 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                           </div>
                         </div>
                       ) : hasEditedQuery ? (
-                        <div className="bg-muted/20 rounded overflow-auto">
-                          <pre className="code-editor text-xs">
-                            <code>
-                              {queryCode.split('\n').map((line, index) => (
+                        <div className="flex gap-3 relative">
+                          <div className="flex-1 bg-muted/20 rounded overflow-auto" ref={sqlRef} onMouseUp={() => handleTextSelect('sql', undefined, sqlRef)}>
+                            <pre className="code-editor text-xs select-text">
+                              <code>
+                                {queryCode.split('\n').map((line, index) => (
+                                  <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: index * 0.02 }}
+                                    className="flex cursor-text"
+                                  >
+                                    <span className="code-line-number">{index + 1}</span>
+                                    <span className="flex-1">{line}</span>
+                                  </motion.div>
+                                ))}
+                              </code>
+                            </pre>
+                          </div>
+                          
+                          {/* Comments sidebar for SQL */}
+                          {getCommentsForSection('sql').length > 0 && (
+                            <div className="w-44 space-y-2">
+                              {getCommentsForSection('sql').map((comment) => (
                                 <motion.div
-                                  key={index}
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  transition={{ delay: index * 0.02 }}
-                                  className="flex"
+                                  key={comment.id}
+                                  initial={{ opacity: 0, x: 20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
                                 >
-                                  <span className="code-line-number">{index + 1}</span>
-                                  <span className="flex-1">{line}</span>
+                                  <button
+                                    onClick={() => handleDeleteComment(comment.id)}
+                                    className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X className="w-2.5 h-2.5 text-muted-foreground" />
+                                  </button>
+                                  <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
+                                  <div className="text-foreground">{comment.text}</div>
                                 </motion.div>
                               ))}
-                            </code>
-                          </pre>
+                            </div>
+                          )}
+                          
+                          {/* Comment input popover for SQL */}
+                          <AnimatePresence>
+                            {showCommentInput && selectedText && activeCommentSection === 'sql' && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="absolute right-3 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
+                                style={{ top: Math.max(commentPosition, 0) }}
+                              >
+                                <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
+                                  <MessageSquare className="w-3 h-3" />
+                                  Add comment
+                                </div>
+                                <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
+                                  "{selectedText}"
+                                </div>
+                                <Textarea
+                                  value={newComment}
+                                  onChange={(e) => setNewComment(e.target.value)}
+                                  placeholder="Your comment..."
+                                  className="text-xs min-h-[60px] mb-2"
+                                  autoFocus
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setShowCommentInput(false);
+                                      setSelectedText(null);
+                                      setActiveCommentTargetId(undefined);
+                                      window.getSelection()?.removeAllRanges();
+                                    }}
+                                    className="text-xs h-6 flex-1"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={handleAddComment}
+                                    className="text-xs h-6 flex-1"
+                                  >
+                                    Add
+                                  </Button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       ) : (
-                        <div className="bg-muted/20 rounded overflow-auto">
-                          <pre className="code-editor text-xs">
-                            <code>
-                              {code.map((line, index) => (
-                                <motion.div
-                                  key={index}
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  transition={{ delay: index * 0.02 }}
-                                  className={cn(
-                                    'flex',
-                                    showDiff && line.type === 'added' && 'diff-added',
-                                    showDiff && line.type === 'removed' && 'diff-removed'
-                                  )}
-                                >
-                                  <span className="code-line-number">{line.lineNumber}</span>
-                                  <span className={cn(
-                                    'flex-1',
-                                    line.type === 'added' && 'text-success',
-                                    line.type === 'removed' && 'text-destructive'
-                                  )}>
-                                    {showDiff && line.type !== 'unchanged' && (
-                                      <span className="inline-block w-4 text-center opacity-50">
-                                        {line.type === 'added' ? '+' : '-'}
-                                      </span>
+                        <div className="flex gap-3 relative">
+                          <div className="flex-1 bg-muted/20 rounded overflow-auto" ref={sqlRef} onMouseUp={() => handleTextSelect('sql', undefined, sqlRef)}>
+                            <pre className="code-editor text-xs select-text">
+                              <code>
+                                {code.map((line, index) => (
+                                  <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: index * 0.02 }}
+                                    className={cn(
+                                      'flex cursor-text',
+                                      showDiff && line.type === 'added' && 'diff-added',
+                                      showDiff && line.type === 'removed' && 'diff-removed'
                                     )}
-                                    {line.content}
-                                  </span>
+                                  >
+                                    <span className="code-line-number">{line.lineNumber}</span>
+                                    <span className={cn(
+                                      'flex-1',
+                                      line.type === 'added' && 'text-success',
+                                      line.type === 'removed' && 'text-destructive'
+                                    )}>
+                                      {showDiff && line.type !== 'unchanged' && (
+                                        <span className="inline-block w-4 text-center opacity-50">
+                                          {line.type === 'added' ? '+' : '-'}
+                                        </span>
+                                      )}
+                                      {line.content}
+                                    </span>
+                                  </motion.div>
+                                ))}
+                              </code>
+                            </pre>
+                          </div>
+                          
+                          {/* Comments sidebar for SQL */}
+                          {getCommentsForSection('sql').length > 0 && (
+                            <div className="w-44 space-y-2">
+                              {getCommentsForSection('sql').map((comment) => (
+                                <motion.div
+                                  key={comment.id}
+                                  initial={{ opacity: 0, x: 20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
+                                >
+                                  <button
+                                    onClick={() => handleDeleteComment(comment.id)}
+                                    className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X className="w-2.5 h-2.5 text-muted-foreground" />
+                                  </button>
+                                  <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
+                                  <div className="text-foreground">{comment.text}</div>
                                 </motion.div>
                               ))}
-                            </code>
-                          </pre>
+                            </div>
+                          )}
+                          
+                          {/* Comment input popover for SQL */}
+                          <AnimatePresence>
+                            {showCommentInput && selectedText && activeCommentSection === 'sql' && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="absolute right-3 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
+                                style={{ top: Math.max(commentPosition, 0) }}
+                              >
+                                <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
+                                  <MessageSquare className="w-3 h-3" />
+                                  Add comment
+                                </div>
+                                <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
+                                  "{selectedText}"
+                                </div>
+                                <Textarea
+                                  value={newComment}
+                                  onChange={(e) => setNewComment(e.target.value)}
+                                  placeholder="Your comment..."
+                                  className="text-xs min-h-[60px] mb-2"
+                                  autoFocus
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setShowCommentInput(false);
+                                      setSelectedText(null);
+                                      setActiveCommentTargetId(undefined);
+                                      window.getSelection()?.removeAllRanges();
+                                    }}
+                                    className="text-xs h-6 flex-1"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={handleAddComment}
+                                    className="text-xs h-6 flex-1"
+                                  >
+                                    Add
+                                  </Button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       )}
                     </>
@@ -811,29 +1067,114 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                     <>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-mono text-muted-foreground">Result Preview (5 rows)</span>
+                        {getCommentsForSection('table').length > 0 && (
+                          <span className="text-[10px] text-warning bg-warning/10 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                            <MessageSquare className="w-2.5 h-2.5" />
+                            {getCommentsForSection('table').length} comment{getCommentsForSection('table').length > 1 ? 's' : ''}
+                          </span>
+                        )}
                       </div>
-                      <div className="bg-muted/20 rounded overflow-auto border border-border">
-                        <UITable>
-                          <TableHeader>
-                            <TableRow className="border-border">
-                              <TableHead className="text-xs h-8 px-2">store_name</TableHead>
-                              <TableHead className="text-xs h-8 px-2">month</TableHead>
-                              <TableHead className="text-xs h-8 px-2">year</TableHead>
-                              <TableHead className="text-xs h-8 px-2 text-right">total_revenue</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {demoTableData.map((row, index) => (
-                              <TableRow key={index} className="border-border">
-                                <TableCell className="text-xs py-2 px-2 font-medium">{row.store_name}</TableCell>
-                                <TableCell className="text-xs py-2 px-2">{row.month}</TableCell>
-                                <TableCell className="text-xs py-2 px-2">{row.year}</TableCell>
-                                <TableCell className="text-xs py-2 px-2 text-right font-mono text-success">{row.total_revenue}</TableCell>
+                      <div className="flex gap-3">
+                        <div className="flex-1 bg-muted/20 rounded overflow-auto border border-border" ref={tableRef}>
+                          <UITable>
+                            <TableHeader>
+                              <TableRow className="border-border">
+                                <TableHead className="text-xs h-8 px-2">store_name</TableHead>
+                                <TableHead className="text-xs h-8 px-2">month</TableHead>
+                                <TableHead className="text-xs h-8 px-2">year</TableHead>
+                                <TableHead className="text-xs h-8 px-2 text-right">total_revenue</TableHead>
                               </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {demoTableData.map((row, index) => (
+                                <TableRow 
+                                  key={index} 
+                                  className="border-border cursor-text select-text"
+                                  onMouseUp={() => handleTextSelect('table', `row-${index}`, tableRef)}
+                                >
+                                  <TableCell className="text-xs py-2 px-2 font-medium">{row.store_name}</TableCell>
+                                  <TableCell className="text-xs py-2 px-2">{row.month}</TableCell>
+                                  <TableCell className="text-xs py-2 px-2">{row.year}</TableCell>
+                                  <TableCell className="text-xs py-2 px-2 text-right font-mono text-success">{row.total_revenue}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </UITable>
+                        </div>
+                        
+                        {/* Comments sidebar for table */}
+                        {getCommentsForSection('table').length > 0 && (
+                          <div className="w-44 space-y-2">
+                            {getCommentsForSection('table').map((comment) => (
+                              <motion.div
+                                key={comment.id}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
+                              >
+                                <button
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-2.5 h-2.5 text-muted-foreground" />
+                                </button>
+                                <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
+                                <div className="text-foreground">{comment.text}</div>
+                              </motion.div>
                             ))}
-                          </TableBody>
-                        </UITable>
+                          </div>
+                        )}
                       </div>
+                      
+                      {/* Comment input popover for table */}
+                      <AnimatePresence>
+                        {showCommentInput && selectedText && activeCommentSection === 'table' && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute right-3 w-56 bg-card border border-border rounded-lg p-3 shadow-lg z-10"
+                            style={{ top: Math.max(commentPosition + 40, 40) }}
+                          >
+                            <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground">
+                              <MessageSquare className="w-3 h-3" />
+                              Add comment
+                            </div>
+                            <div className="text-[10px] text-muted-foreground/70 italic mb-2 truncate">
+                              "{selectedText}"
+                            </div>
+                            <Textarea
+                              value={newComment}
+                              onChange={(e) => setNewComment(e.target.value)}
+                              placeholder="Your comment..."
+                              className="text-xs min-h-[60px] mb-2"
+                              autoFocus
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setShowCommentInput(false);
+                                  setSelectedText(null);
+                                  setActiveCommentTargetId(undefined);
+                                  window.getSelection()?.removeAllRanges();
+                                }}
+                                className="text-xs h-6 flex-1"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={handleAddComment}
+                                className="text-xs h-6 flex-1"
+                              >
+                                Add
+                              </Button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </>
                   )}
                 </div>
