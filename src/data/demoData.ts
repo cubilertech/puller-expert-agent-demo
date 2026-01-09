@@ -50,30 +50,17 @@ export const chatMessages: ChatMessage[] = [
   {
     id: 'msg-2',
     sender: 'agent',
-    content: 'Analyzing request... I\'ll calculate revenue as the sum of all order values within a store by month.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 4),
-    type: 'reasoning',
-  },
-  {
-    id: 'msg-3',
-    sender: 'agent',
-    content: 'Assumptions made:\n• Order value = pre-tax price + tax - discounts\n• Result is the highest revenue month by a single store\n• Year and Month sourced from "dim_date"\n• Store-level revenue attributed to "grouped_customer_store_name"',
-    timestamp: new Date(Date.now() - 1000 * 60 * 3),
-    type: 'reasoning',
-  },
-  {
-    id: 'msg-4',
-    sender: 'agent',
-    content: 'Note: I ignored null fields (assumes all fields are non-null). Adjusted "all time" to "across the dataset" given data scope limitations.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 2.5),
-    type: 'reasoning',
-  },
-  {
-    id: 'msg-5',
-    sender: 'agent',
-    content: 'Generated SQL query and CSV result. Ready for expert review.',
+    content: 'I\'ve analyzed the data and generated SQL query with CSV results. Ready for expert review.',
     timestamp: new Date(Date.now() - 1000 * 60 * 2),
     type: 'action',
+    assumptions: [
+      'Revenue calculated as sum of all order values (pre-tax price + tax - discounts)',
+      'Result is the highest revenue month by a single store',
+      'Year and Month sourced from "dim_date"',
+      'Store-level revenue attributed to "grouped_customer_store_name"',
+      'Ignored null fields (assumes all fields are non-null)',
+      'Adjusted "all time" to "across the dataset" given data scope limitations',
+    ],
   },
 ];
 
@@ -88,23 +75,14 @@ export const task2Messages: ChatMessage[] = [
   {
     id: 'msg-t2-2',
     sender: 'agent',
-    content: 'Processing request for 2025 customer conversion analysis...',
-    timestamp: new Date(Date.now() - 1000 * 60 * 19),
-    type: 'reasoning',
-  },
-  {
-    id: 'msg-t2-3',
-    sender: 'agent',
-    content: 'Assumptions made:\n• Purchase price > $0 means (total order price - discount) > 0\n• Only considered first order type of "One Off" (ignoring B2B, wholesale, trial, samples)\n• Included exhaustive detail per customer for specificity',
-    timestamp: new Date(Date.now() - 1000 * 60 * 18),
-    type: 'reasoning',
-  },
-  {
-    id: 'msg-t2-4',
-    sender: 'agent',
-    content: 'CSV file attached with customer list. Ready for expert review.',
+    content: 'I\'ve attached a CSV file with the customer conversion list for 2025. Ready for expert review.',
     timestamp: new Date(Date.now() - 1000 * 60 * 17),
     type: 'action',
+    assumptions: [
+      'Purchase price > $0 means (total order price - discount) > 0',
+      'Only considered first order type of "One Off" (ignoring B2B, wholesale, trial, samples)',
+      'Included exhaustive detail per customer for specificity',
+    ],
   },
 ];
 
@@ -126,30 +104,20 @@ export const task3Messages: ChatMessage[] = [
   {
     id: 'msg-t3-3',
     sender: 'agent',
-    content: 'Complex multi-part analysis detected. Breaking down into components...',
-    timestamp: new Date(Date.now() - 1000 * 60 * 48),
-    type: 'reasoning',
-  },
-  {
-    id: 'msg-t3-4',
-    sender: 'agent',
-    content: 'Assumptions:\n• July 4th sale = exactly July 4th date\n• Repeat customer = 2+ lifetime purchases (all products)\n• Cohort = first min order month (all products)\n• Median days = typical repeat purchase gap\n• "Pull-forward" = July 4th customers who repurchased sooner than cohort median',
-    timestamp: new Date(Date.now() - 1000 * 60 * 47),
-    type: 'reasoning',
-  },
-  {
-    id: 'msg-t3-5',
-    sender: 'agent',
-    content: 'Additional metrics included:\n• "Days to 50% of units" (LG Products) as drop performance measure\n• Cannibalization analysis between consecutive releases\n• Note: Revenue/GMV not explicitly included (just orders)\n• Attribution assumes July 4th sale as main driver',
-    timestamp: new Date(Date.now() - 1000 * 60 * 46),
-    type: 'reasoning',
-  },
-  {
-    id: 'msg-t3-6',
-    sender: 'agent',
-    content: 'Analysis complete with SQL and results. Flagged for expert review given complexity.',
+    content: 'Analysis complete with SQL and detailed results. Flagged for expert review given complexity.',
     timestamp: new Date(Date.now() - 1000 * 60 * 45),
     type: 'action',
+    assumptions: [
+      'July 4th sale = exactly July 4th date',
+      'Repeat customer = 2+ lifetime purchases (all products)',
+      'Cohort = first min order month (all products)',
+      'Median days = typical repeat purchase gap',
+      '"Pull-forward" = July 4th customers who repurchased sooner than cohort median',
+      '"Days to 50% of units" (LG Products) as drop performance measure',
+      'Cannibalization analysis between consecutive releases',
+      'Revenue/GMV not explicitly included (just orders)',
+      'Attribution assumes July 4th sale as main driver',
+    ],
   },
 ];
 

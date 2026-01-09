@@ -1,8 +1,8 @@
 import { motion, Variants } from 'framer-motion';
-import { Bot, User, Zap, MessageSquare } from 'lucide-react';
+import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
 import { ChatMessage } from '@/types';
 import { cn } from '@/lib/utils';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ContextThreadProps {
   messages: ChatMessage[];
@@ -99,6 +99,14 @@ const lineVariants: Variants = {
 export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
+  const [expandedAssumptions, setExpandedAssumptions] = useState<Record<string, boolean>>({});
+
+  const toggleAssumptions = (messageId: string) => {
+    setExpandedAssumptions(prev => ({
+      ...prev,
+      [messageId]: !prev[messageId]
+    }));
+  };
 
   // Scroll-follow behavior
   useEffect(() => {
@@ -132,6 +140,8 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
         {messages.map((message, index) => {
           const { icon: Icon, color, label } = senderConfig[message.sender];
           const isLast = index === messages.length - 1;
+          const hasAssumptions = message.assumptions && message.assumptions.length > 0;
+          const isExpanded = expandedAssumptions[message.id] ?? true; // Default expanded
           
           // Adaptive timing
           const cumulativeDelay = index < 3 
@@ -199,6 +209,47 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                   >
                     {message.content}
                   </motion.p>
+                  
+                  {/* Nested Assumptions */}
+                  {hasAssumptions && (
+                    <motion.div 
+                      variants={badgeVariants}
+                      className="mt-3"
+                    >
+                      <button
+                        onClick={() => toggleAssumptions(message.id)}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        )}
+                        <span className="font-medium">Assumptions ({message.assumptions!.length})</span>
+                      </button>
+                      
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="bg-muted/50 rounded-md p-2.5 border border-border/50"
+                        >
+                          <ul className="space-y-1.5">
+                            {message.assumptions!.map((assumption, idx) => (
+                              <li 
+                                key={idx}
+                                className="text-xs text-muted-foreground flex items-start gap-2"
+                              >
+                                <span className="text-primary/60 mt-0.5">•</span>
+                                <span>{assumption}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  )}
                   
                   {/* Animated Badges */}
                   {message.type === 'reasoning' && (
