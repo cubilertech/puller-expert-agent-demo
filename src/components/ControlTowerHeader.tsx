@@ -52,7 +52,7 @@ export function ControlTowerHeader({
           </div>
           <div className="flex items-center gap-1.5">
             <Database className={cn('w-3.5 h-3.5 transition-colors', isLearning ? 'text-success animate-pulse' : 'text-muted-foreground')} />
-            <span className="text-muted-foreground">Knowledge Graph</span>
+            <span className="text-muted-foreground">Context Graph</span>
           </div>
         </div>
 
