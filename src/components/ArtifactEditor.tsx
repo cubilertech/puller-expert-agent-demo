@@ -97,6 +97,7 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
   const [commentPosition, setCommentPosition] = useState(0);
   const [activeCommentSection, setActiveCommentSection] = useState<CommentSection>('message');
   const [activeCommentTargetId, setActiveCommentTargetId] = useState<string | undefined>();
+  const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const messageRef = useRef<HTMLDivElement>(null);
   const assumptionsRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -177,6 +178,69 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
 
   const handleDeleteComment = (commentId: string) => {
     setComments(comments.filter(c => c.id !== commentId));
+    if (focusedCommentId === commentId) {
+      setFocusedCommentId(null);
+    }
+  };
+
+  // Handle clicking on highlighted text to show comment
+  const handleHighlightClick = (commentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFocusedCommentId(focusedCommentId === commentId ? null : commentId);
+  };
+
+  // Render text with highlighted commented portions
+  const renderHighlightedText = (text: string, section: CommentSection, targetId?: string) => {
+    const sectionComments = getCommentsForSection(section, targetId);
+    if (sectionComments.length === 0) return text;
+
+    // Find all occurrences of commented text and highlight them
+    let result: (string | JSX.Element)[] = [];
+    let currentIndex = 0;
+    
+    // Sort comments by their position in the text
+    const sortedComments = sectionComments
+      .map(comment => ({
+        ...comment,
+        startIndex: text.indexOf(comment.selection)
+      }))
+      .filter(c => c.startIndex !== -1)
+      .sort((a, b) => a.startIndex - b.startIndex);
+
+    sortedComments.forEach((comment, idx) => {
+      const startIndex = text.indexOf(comment.selection, currentIndex);
+      if (startIndex === -1) return;
+
+      // Add text before the highlight
+      if (startIndex > currentIndex) {
+        result.push(text.slice(currentIndex, startIndex));
+      }
+
+      // Add highlighted text
+      const isFocused = focusedCommentId === comment.id;
+      result.push(
+        <span
+          key={`highlight-${comment.id}-${idx}`}
+          onClick={(e) => handleHighlightClick(comment.id, e)}
+          className={cn(
+            "bg-warning/30 border-b-2 border-warning cursor-pointer transition-all rounded-sm px-0.5",
+            isFocused && "bg-warning/50 ring-2 ring-warning/50"
+          )}
+          title={comment.text}
+        >
+          {comment.selection}
+        </span>
+      );
+
+      currentIndex = startIndex + comment.selection.length;
+    });
+
+    // Add remaining text
+    if (currentIndex < text.length) {
+      result.push(text.slice(currentIndex));
+    }
+
+    return result.length > 0 ? result : text;
   };
 
   const toggleAssumptionInMessage = (id: string) => {
@@ -357,7 +421,7 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                         className="flex-1 text-sm text-foreground whitespace-pre-wrap bg-card/80 rounded-lg p-3 border border-border cursor-text"
                         onMouseUp={() => handleTextSelect('message')}
                       >
-                        {message}
+                        {renderHighlightedText(message, 'message')}
                       </div>
                       
                       {/* Comments sidebar for message */}
@@ -368,10 +432,19 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                               key={comment.id}
                               initial={{ opacity: 0, x: 20 }}
                               animate={{ opacity: 1, x: 0 }}
-                              className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
+                              onClick={() => setFocusedCommentId(focusedCommentId === comment.id ? null : comment.id)}
+                              className={cn(
+                                "border rounded-lg p-2 text-xs relative group cursor-pointer transition-all",
+                                focusedCommentId === comment.id 
+                                  ? "bg-warning/20 border-warning ring-2 ring-warning/30" 
+                                  : "bg-warning/10 border-warning/30 hover:border-warning/50"
+                              )}
                             >
                               <button
-                                onClick={() => handleDeleteComment(comment.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteComment(comment.id);
+                                }}
                                 className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <X className="w-2.5 h-2.5 text-muted-foreground" />
@@ -494,7 +567,7 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                               )}
                               onMouseUp={() => handleTextSelect('assumption', assumption.id, assumptionsRef)}
                             >
-                              {assumption.text}
+                              {renderHighlightedText(assumption.text, 'assumption', assumption.id)}
                             </label>
                             {assumptionComments.length > 0 && (
                               <span className="text-[10px] text-warning bg-warning/10 px-1.5 py-0.5 rounded-full">
@@ -570,10 +643,19 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                             key={comment.id}
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
+                            onClick={() => setFocusedCommentId(focusedCommentId === comment.id ? null : comment.id)}
+                            className={cn(
+                              "border rounded-lg p-2 text-xs relative group cursor-pointer transition-all",
+                              focusedCommentId === comment.id 
+                                ? "bg-warning/20 border-warning ring-2 ring-warning/30" 
+                                : "bg-warning/10 border-warning/30 hover:border-warning/50"
+                            )}
                           >
                             <button
-                              onClick={() => handleDeleteComment(comment.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteComment(comment.id);
+                              }}
                               className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <X className="w-2.5 h-2.5 text-muted-foreground" />
@@ -996,10 +1078,19 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                                   key={comment.id}
                                   initial={{ opacity: 0, x: 20 }}
                                   animate={{ opacity: 1, x: 0 }}
-                                  className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
+                                  onClick={() => setFocusedCommentId(focusedCommentId === comment.id ? null : comment.id)}
+                                  className={cn(
+                                    "border rounded-lg p-2 text-xs relative group cursor-pointer transition-all",
+                                    focusedCommentId === comment.id 
+                                      ? "bg-warning/20 border-warning ring-2 ring-warning/30" 
+                                      : "bg-warning/10 border-warning/30 hover:border-warning/50"
+                                  )}
                                 >
                                   <button
-                                    onClick={() => handleDeleteComment(comment.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteComment(comment.id);
+                                    }}
                                     className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                                   >
                                     <X className="w-2.5 h-2.5 text-muted-foreground" />
@@ -1110,10 +1201,19 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                                 key={comment.id}
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
+                                onClick={() => setFocusedCommentId(focusedCommentId === comment.id ? null : comment.id)}
+                                className={cn(
+                                  "border rounded-lg p-2 text-xs relative group cursor-pointer transition-all",
+                                  focusedCommentId === comment.id 
+                                    ? "bg-warning/20 border-warning ring-2 ring-warning/30" 
+                                    : "bg-warning/10 border-warning/30 hover:border-warning/50"
+                                )}
                               >
                                 <button
-                                  onClick={() => handleDeleteComment(comment.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteComment(comment.id);
+                                  }}
                                   className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                   <X className="w-2.5 h-2.5 text-muted-foreground" />
