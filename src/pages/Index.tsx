@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { TaskFeed } from '@/components/TaskFeed';
 import { ContextThread } from '@/components/ContextThread';
 import { ArtifactEditor } from '@/components/ArtifactEditor';
-import { KnowledgeGraph } from '@/components/KnowledgeGraph';
+import { ContextGraph } from '@/components/ContextGraph';
 import { FlyingArtifact } from '@/components/FlyingArtifact';
 import { LearningToast } from '@/components/LearningToast';
 import { ControlTowerHeader } from '@/components/ControlTowerHeader';

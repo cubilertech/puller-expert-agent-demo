@@ -4,7 +4,7 @@ import { Brain, Sparkles } from 'lucide-react';
 import { KnowledgeNode } from '@/types';
 import { cn } from '@/lib/utils';
 
-interface KnowledgeGraphProps {
+interface ContextGraphProps {
   nodes: KnowledgeNode[];
   isLearning: boolean;
   newNodeLabel?: string;
@@ -16,7 +16,7 @@ const nodeColors = {
   fact: { fill: 'fill-success', stroke: 'stroke-success', glow: 'text-success' },
 };
 
-export function KnowledgeGraph({ nodes, isLearning, newNodeLabel }: KnowledgeGraphProps) {
+export function ContextGraph({ nodes, isLearning, newNodeLabel }: ContextGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dimensions, setDimensions] = useState({ width: 300, height: 300 });
 
