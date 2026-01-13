@@ -185,7 +185,7 @@ export default function Login() {
           stiffness: 400,
           damping: 20,
           delay: 0.1
-        }} className="w-56 h-56 flex items-center justify-center mx-auto mb-2">
+        }} className="w-56 h-20 flex items-center justify-center mx-auto mb-2">
             <img src={pullerLogo} alt="Puller AI" className="w-full object-contain " />
           </motion.div>
           <h1 className="text-2xl font-bold text-foreground">Puller's Command Center</h1>
