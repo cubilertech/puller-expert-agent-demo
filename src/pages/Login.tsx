@@ -171,7 +171,7 @@ export default function Login() {
             initial={{ scale: 0, rotate: -10 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
-            className="w-20 h-20 flex items-center justify-center mx-auto mb-4"
+            className="w-32 h-32 flex items-center justify-center mx-auto mb-6"
           >
             <img src={pullerLogo} alt="Puller AI" className="w-full h-full object-contain" />
           </motion.div>
