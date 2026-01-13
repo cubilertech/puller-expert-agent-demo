@@ -35,6 +35,18 @@ export default function Index() {
   // Enable simulation for ghost tasks
   useSimulation(true, setTasks);
 
+  // Refresh demo content
+  const handleRefreshDemo = useCallback(() => {
+    setTasks([...initialTasks]);
+    setSelectedTaskId(initialTasks[0]?.id || null);
+    setKnowledgeNodes([...initialKnowledgeNodes]);
+    setApprovedCount(0);
+    setIsApproving(false);
+    setShowFlyingArtifact(false);
+    setIsLearning(false);
+    setLearningSignal(null);
+  }, []);
+
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
   const taskData = selectedTaskId ? allTaskData[selectedTaskId] : null;
 
@@ -133,6 +145,7 @@ export default function Index() {
         approvedCount={approvedCount}
         isLearning={isLearning}
         onLogout={logout}
+        onRefresh={handleRefreshDemo}
       />
 
       {/* Main Layout */}
