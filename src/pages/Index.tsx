@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TaskFeed } from '@/components/TaskFeed';
 import { ContextThread } from '@/components/ContextThread';
 import { ArtifactEditor } from '@/components/ArtifactEditor';
@@ -11,6 +12,15 @@ import { Task, KnowledgeNode, LearningSignal } from '@/types';
 import { initialTasks, chatMessages, originalCode, initialKnowledgeNodes, taskDataMap, originalCodeAnnotations } from '@/data/demoData';
 
 export default function Index() {
+  const navigate = useNavigate();
+  
+  // Auth check
+  useEffect(() => {
+    const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [navigate]);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>('task-1');
   const [knowledgeNodes, setKnowledgeNodes] = useState<KnowledgeNode[]>(initialKnowledgeNodes);
