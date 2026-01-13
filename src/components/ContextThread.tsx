@@ -95,14 +95,6 @@ const badgeVariants: Variants = {
   },
 };
 
-// Connection line variants
-const lineVariants: Variants = {
-  hidden: { scaleY: 0 },
-  visible: {
-    scaleY: 1,
-    transition: { duration: 0.3 },
-  },
-};
 
 export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -206,7 +198,6 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
           const isLastMessage = index === messages.length - 1 && threadComments.length === 0;
           const hasAssumptions = message.assumptions && message.assumptions.length > 0;
           const isExpanded = expandedAssumptions[message.id] ?? true;
-          const hasMoreAfter = index < messages.length - 1 || threadComments.length > 0;
           
           // Adaptive timing
           const cumulativeDelay = index < 3 
@@ -216,20 +207,10 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
           return (
             <div 
               key={message.id} 
+              id={`message-${message.id}`}
               className="relative"
               ref={isLastMessage ? lastMessageRef : undefined}
             >
-              {/* Connection line to next message */}
-              {hasMoreAfter && (
-                <motion.div
-                  variants={lineVariants}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: cumulativeDelay + 0.4 }}
-                  className="absolute left-[19px] top-[52px] w-[2px] h-[calc(100%-20px)] bg-gradient-to-b from-primary/30 to-primary/10 origin-top"
-                />
-              )}
-              
               <motion.div
                 variants={messageVariants}
                 initial="hidden"
@@ -341,10 +322,22 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
           );
         })}
 
-        {/* Thread Comments - appear as new messages quoting previous content */}
+        {/* Thread Comments - appear as reply messages, clickable to scroll to source */}
         <AnimatePresence>
           {threadComments.map((comment, index) => {
             const isLast = index === threadComments.length - 1;
+            
+            const scrollToSource = () => {
+              const sourceElement = document.getElementById(`message-${comment.sourceMessageId}`);
+              if (sourceElement) {
+                sourceElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Briefly highlight the source message
+                sourceElement.classList.add('ring-2', 'ring-warning/50', 'ring-offset-2', 'ring-offset-background');
+                setTimeout(() => {
+                  sourceElement.classList.remove('ring-2', 'ring-warning/50', 'ring-offset-2', 'ring-offset-background');
+                }, 2000);
+              }
+            };
             
             return (
               <motion.div
@@ -355,31 +348,29 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="relative"
               >
-                {/* Connection line */}
-                {!isLast && (
-                  <div className="absolute left-[19px] top-[52px] w-[2px] h-[calc(100%-20px)] bg-gradient-to-b from-warning/30 to-warning/10" />
-                )}
-                
                 <div className="rounded-lg p-3 bg-warning/5 border border-warning/20 relative z-10">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-6 h-6 rounded-full bg-warning flex items-center justify-center">
                       <Quote className="w-3 h-3 text-warning-foreground" />
                     </div>
-                    <span className="text-xs font-medium text-foreground">Comment</span>
+                    <span className="text-xs font-medium text-foreground">Reply</span>
                     <span className="text-xs text-muted-foreground ml-auto">
                       {comment.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   
                   <div className="pl-8">
-                    {/* Quoted text */}
-                    <div className="bg-muted/50 border-l-2 border-warning/50 pl-3 py-2 rounded-r mb-2">
-                      <p className="text-xs text-muted-foreground italic">
+                    {/* Quoted text - clickable to scroll to source */}
+                    <button
+                      onClick={scrollToSource}
+                      className="w-full text-left bg-muted/50 border-l-2 border-warning/50 pl-3 py-2 rounded-r mb-2 hover:bg-muted/70 transition-colors group"
+                    >
+                      <p className="text-xs text-muted-foreground italic group-hover:text-foreground/70 transition-colors">
                         "{comment.quotedText.length > 100 
                           ? comment.quotedText.slice(0, 100) + '...' 
                           : comment.quotedText}"
                       </p>
-                    </div>
+                    </button>
                     
                     {/* Comment text */}
                     <p className="text-sm text-foreground/90">{comment.comment}</p>
