@@ -8,11 +8,13 @@ import { FlyingArtifact } from '@/components/FlyingArtifact';
 import { LearningToast } from '@/components/LearningToast';
 import { ControlTowerHeader } from '@/components/ControlTowerHeader';
 import { useSimulation } from '@/hooks/useSimulation';
+import { useAuth } from '@/hooks/useAuth';
 import { Task, KnowledgeNode, LearningSignal } from '@/types';
 import { initialTasks, chatMessages, originalCode, initialKnowledgeNodes, taskDataMap, originalCodeAnnotations } from '@/data/demoData';
 
 export default function Index() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   
   // Auth check
   useEffect(() => {
@@ -130,6 +132,7 @@ export default function Index() {
         taskCount={tasks.filter((t) => t.status !== 'approved').length}
         approvedCount={approvedCount}
         isLearning={isLearning}
+        onLogout={logout}
       />
 
       {/* Main Layout */}
