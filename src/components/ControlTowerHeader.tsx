@@ -1,15 +1,19 @@
-import { Activity, Shield, Zap, Database } from 'lucide-react';
+import { Activity, Shield, Zap, Database, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+
 interface ControlTowerHeaderProps {
   taskCount: number;
   approvedCount: number;
   isLearning: boolean;
+  onLogout?: () => void;
 }
 export function ControlTowerHeader({
   taskCount,
   approvedCount,
-  isLearning
+  isLearning,
+  onLogout
 }: ControlTowerHeaderProps) {
   return <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4">
       <div className="flex items-center gap-3">
@@ -75,6 +79,19 @@ export function ControlTowerHeader({
             </motion.div>
             <span className="text-xs font-medium text-success">Learning</span>
           </motion.div>}
+
+        {/* Logout Button */}
+        {onLogout && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onLogout}
+            className="flex items-center gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="text-xs">Logout</span>
+          </Button>
+        )}
       </div>
     </header>;
 }
