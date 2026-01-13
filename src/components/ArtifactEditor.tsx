@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { CommentThread } from '@/components/CommentThread';
 import {
   Table as UITable,
   TableHeader,
@@ -431,36 +432,12 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                       </div>
                       
                       {/* Comments sidebar for message */}
-                      {getCommentsForSection('message').length > 0 && (
-                        <div className="w-48 space-y-2">
-                          {getCommentsForSection('message').map((comment) => (
-                            <motion.div
-                              key={comment.id}
-                              initial={{ opacity: 0, x: 20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              onClick={() => setFocusedCommentId(focusedCommentId === comment.id ? null : comment.id)}
-                              className={cn(
-                                "border rounded-lg p-2 text-xs relative group cursor-pointer transition-all",
-                                focusedCommentId === comment.id 
-                                  ? "bg-warning/20 border-warning ring-2 ring-warning/30" 
-                                  : "bg-warning/10 border-warning/30 hover:border-warning/50"
-                              )}
-                            >
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteComment(comment.id);
-                                }}
-                                className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <X className="w-2.5 h-2.5 text-muted-foreground" />
-                              </button>
-                              <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
-                              <div className="text-foreground">{comment.text}</div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
+                      <CommentThread
+                        comments={getCommentsForSection('message')}
+                        focusedCommentId={focusedCommentId}
+                        onFocusComment={setFocusedCommentId}
+                        onDeleteComment={handleDeleteComment}
+                      />
                     </div>
                   )}
                 </div>
@@ -593,36 +570,12 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                     </div>
                     
                     {/* Comments sidebar for assumptions */}
-                    {getCommentsForSection('assumption').length > 0 && (
-                      <div className="w-44 space-y-2">
-                        {getCommentsForSection('assumption').map((comment) => (
-                          <motion.div
-                            key={comment.id}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            onClick={() => setFocusedCommentId(focusedCommentId === comment.id ? null : comment.id)}
-                            className={cn(
-                              "border rounded-lg p-2 text-xs relative group cursor-pointer transition-all",
-                              focusedCommentId === comment.id 
-                                ? "bg-warning/20 border-warning ring-2 ring-warning/30" 
-                                : "bg-warning/10 border-warning/30 hover:border-warning/50"
-                            )}
-                          >
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteComment(comment.id);
-                              }}
-                              className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-2.5 h-2.5 text-muted-foreground" />
-                            </button>
-                            <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
-                            <div className="text-foreground">{comment.text}</div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
+                    <CommentThread
+                      comments={getCommentsForSection('assumption')}
+                      focusedCommentId={focusedCommentId}
+                      onFocusComment={setFocusedCommentId}
+                      onDeleteComment={handleDeleteComment}
+                    />
                   </div>
                 </div>
               </motion.div>
@@ -869,27 +822,12 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                           </div>
                           
                           {/* Comments sidebar for SQL */}
-                          {getCommentsForSection('sql').length > 0 && (
-                            <div className="w-44 space-y-2">
-                              {getCommentsForSection('sql').map((comment) => (
-                                <motion.div
-                                  key={comment.id}
-                                  initial={{ opacity: 0, x: 20 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs relative group"
-                                >
-                                  <button
-                                    onClick={() => handleDeleteComment(comment.id)}
-                                    className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <X className="w-2.5 h-2.5 text-muted-foreground" />
-                                  </button>
-                                  <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
-                                  <div className="text-foreground">{comment.text}</div>
-                                </motion.div>
-                              ))}
-                            </div>
-                          )}
+                          <CommentThread
+                            comments={getCommentsForSection('sql')}
+                            focusedCommentId={focusedCommentId}
+                            onFocusComment={setFocusedCommentId}
+                            onDeleteComment={handleDeleteComment}
+                          />
                           
                           {/* Comment input popover for SQL */}
                         </div>
@@ -930,36 +868,12 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                           </div>
                           
                           {/* Comments sidebar for SQL */}
-                          {getCommentsForSection('sql').length > 0 && (
-                            <div className="w-44 space-y-2">
-                              {getCommentsForSection('sql').map((comment) => (
-                                <motion.div
-                                  key={comment.id}
-                                  initial={{ opacity: 0, x: 20 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  onClick={() => setFocusedCommentId(focusedCommentId === comment.id ? null : comment.id)}
-                                  className={cn(
-                                    "border rounded-lg p-2 text-xs relative group cursor-pointer transition-all",
-                                    focusedCommentId === comment.id 
-                                      ? "bg-warning/20 border-warning ring-2 ring-warning/30" 
-                                      : "bg-warning/10 border-warning/30 hover:border-warning/50"
-                                  )}
-                                >
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteComment(comment.id);
-                                    }}
-                                    className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <X className="w-2.5 h-2.5 text-muted-foreground" />
-                                  </button>
-                                  <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
-                                  <div className="text-foreground">{comment.text}</div>
-                                </motion.div>
-                              ))}
-                            </div>
-                          )}
+                          <CommentThread
+                            comments={getCommentsForSection('sql')}
+                            focusedCommentId={focusedCommentId}
+                            onFocusComment={setFocusedCommentId}
+                            onDeleteComment={handleDeleteComment}
+                          />
                         </div>
                       )}
                     </>
@@ -1003,36 +917,12 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                         </div>
                         
                         {/* Comments sidebar for table */}
-                        {getCommentsForSection('table').length > 0 && (
-                          <div className="w-44 space-y-2">
-                            {getCommentsForSection('table').map((comment) => (
-                              <motion.div
-                                key={comment.id}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                onClick={() => setFocusedCommentId(focusedCommentId === comment.id ? null : comment.id)}
-                                className={cn(
-                                  "border rounded-lg p-2 text-xs relative group cursor-pointer transition-all",
-                                  focusedCommentId === comment.id 
-                                    ? "bg-warning/20 border-warning ring-2 ring-warning/30" 
-                                    : "bg-warning/10 border-warning/30 hover:border-warning/50"
-                                )}
-                              >
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteComment(comment.id);
-                                  }}
-                                  className="absolute -top-1 -right-1 w-4 h-4 bg-muted rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <X className="w-2.5 h-2.5 text-muted-foreground" />
-                                </button>
-                                <div className="text-warning/80 italic mb-1 truncate">"{comment.selection}"</div>
-                                <div className="text-foreground">{comment.text}</div>
-                              </motion.div>
-                            ))}
-                          </div>
-                        )}
+                        <CommentThread
+                          comments={getCommentsForSection('table')}
+                          focusedCommentId={focusedCommentId}
+                          onFocusComment={setFocusedCommentId}
+                          onDeleteComment={handleDeleteComment}
+                        />
                       </div>
                     </>
                   )}
