@@ -13,7 +13,7 @@ const task1: Task = {
   status: 'review',
   timestamp: new Date(Date.now() - 1000 * 60 * 6),
   priority: 'high',
-  description: 'What's the repeat purchase rate for GlowMate Deodorant within 90 days?',
+  description: "What's the repeat purchase rate for GlowMate Deodorant within 90 days?",
   source: 'email',
   industry: 'cpg-consumer-brands',
   flags: { urgency: false, humanRequested: false, vip: true },

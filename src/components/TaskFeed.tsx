@@ -21,9 +21,10 @@ import {
   MessageCircle,
   Inbox
 } from 'lucide-react';
-import { Task, TaskStatus, TaskSource, SentStatus, CONFIDENCE_THRESHOLD } from '@/types';
+import { Task, TaskStatus, TaskSource, SentStatus, CONFIDENCE_THRESHOLD, IndustryVertical } from '@/types';
 import { cn } from '@/lib/utils';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { industryConfig } from '@/data/demoConfig';
 
 interface TaskFeedProps {
   tasks: Task[];
@@ -157,7 +158,18 @@ function TaskItem({ task, index, isSelected, onSelect, onForceComplete }: TaskIt
       )}
     >
       {/* Source & Flags Row */}
-      <div className="flex items-center gap-1.5 mb-2">
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+        {/* Industry Badge */}
+        {task.industry && industryConfig[task.industry] && (
+          <span className={cn(
+            "flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-muted/50",
+            industryConfig[task.industry].color
+          )}>
+            <span>{industryConfig[task.industry].icon}</span>
+            {industryConfig[task.industry].label.split(' ')[0]}
+          </span>
+        )}
+        
         <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
           <SourceIcon className="w-3 h-3" />
           {sourceConfig[task.source].label}

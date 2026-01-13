@@ -10,7 +10,7 @@ import { ControlTowerHeader } from '@/components/ControlTowerHeader';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useAuth } from '@/hooks/useAuth';
 import { Task, KnowledgeNode, LearningSignal } from '@/types';
-import { initialTasks, chatMessages, originalCode, initialKnowledgeNodes, taskDataMap, originalCodeAnnotations } from '@/data/demoData';
+import { initialTasks, initialKnowledgeNodes, allTaskData, chatMessages, originalCode, originalCodeAnnotations } from '@/data/demoData';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ export default function Index() {
     }
   }, [navigate]);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>('task-1');
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialTasks[0]?.id || null);
   const [knowledgeNodes, setKnowledgeNodes] = useState<KnowledgeNode[]>(initialKnowledgeNodes);
   const [isApproving, setIsApproving] = useState(false);
   const [showFlyingArtifact, setShowFlyingArtifact] = useState(false);
@@ -36,7 +36,7 @@ export default function Index() {
   useSimulation(true, setTasks);
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
-  const taskData = selectedTaskId ? taskDataMap[selectedTaskId] : null;
+  const taskData = selectedTaskId ? allTaskData[selectedTaskId] : null;
 
   const handleSendToRequestor = useCallback(() => {
     if (!selectedTaskId) return;
@@ -154,7 +154,7 @@ export default function Index() {
               {/* Context Thread */}
               <div className="flex-1 overflow-hidden">
                 <ContextThread
-                  messages={chatMessages}
+                  messages={taskData?.messages || chatMessages}
                   taskTitle={selectedTask.description}
                 />
               </div>
@@ -164,6 +164,10 @@ export default function Index() {
                 <ArtifactEditor
                   code={taskData?.code || originalCode}
                   annotations={taskData?.annotations || originalCodeAnnotations}
+                  tableColumns={taskData?.tableColumns}
+                  tableData={taskData?.tableData}
+                  initialAssumptions={taskData?.assumptions}
+                  initialMessage={taskData?.responseMessage}
                   onApprove={handleSendToRequestor}
                   onOverride={handleOverride}
                   isApproving={isApproving}

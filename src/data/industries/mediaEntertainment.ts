@@ -294,7 +294,7 @@ const task4: Task = {
   status: 'validating',
   timestamp: new Date(Date.now() - 1000 * 60 * 50),
   priority: 'low',
-  description: 'What's the typical time between episodes watched for MegaSports Live viewers?',
+  description: "What's the typical time between episodes watched for MegaSports Live viewers?",
   source: 'meeting',
   industry: 'media-entertainment',
   flags: { urgency: false, humanRequested: false, vip: false },
