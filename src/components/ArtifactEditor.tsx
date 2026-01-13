@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, RefreshCw, FileCode, AlertTriangle, Edit3, Table, Code, ChevronDown, ChevronUp, Send, Plus, Sparkles, MessageSquare, X, Maximize2, Minimize2, Lightbulb } from 'lucide-react';
-import { CodeDiff } from '@/types';
-import { SqlAnnotation } from '@/data/demoData';
+import { CodeDiff, SqlAnnotation, TableColumn, Assumption as AssumptionType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -25,6 +24,11 @@ interface ArtifactEditorProps {
   onOverride: () => void;
   isApproving: boolean;
   hideActions?: boolean;
+  // Dynamic data props
+  tableColumns?: TableColumn[];
+  tableData?: Record<string, string | number>[];
+  initialAssumptions?: AssumptionType[];
+  initialMessage?: string;
 }
 
 interface Assumption {
@@ -38,14 +42,21 @@ type CommentSection = 'message' | 'assumption' | 'table' | 'sql';
 interface Comment {
   id: string;
   section: CommentSection;
-  targetId?: string; // For assumptions: assumption id, for table: row index, for sql: line number
+  targetId?: string;
   selection: string;
   text: string;
   position: number;
 }
 
-// Demo table data for the query result preview
-const demoTableData = [
+// Default/fallback demo table data
+const defaultTableColumns: TableColumn[] = [
+  { key: 'store_name', label: 'Store Name', align: 'left' },
+  { key: 'month', label: 'Month', align: 'left' },
+  { key: 'year', label: 'Year', align: 'left' },
+  { key: 'total_revenue', label: 'Total Revenue', align: 'right' },
+];
+
+const defaultTableData = [
   { store_name: 'Downtown Seattle', month: 'November', year: 2024, total_revenue: '$2,847,392' },
   { store_name: 'Manhattan Flagship', month: 'December', year: 2024, total_revenue: '$2,654,128' },
   { store_name: 'Chicago Loop', month: 'November', year: 2024, total_revenue: '$2,312,847' },
@@ -69,14 +80,25 @@ This was calculated by summing all order values (pre-tax price + tax - discounts
 
 type ViewMode = 'code' | 'table';
 
-export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, isApproving, hideActions = false }: ArtifactEditorProps) {
+export function ArtifactEditor({ 
+  code, 
+  annotations = [], 
+  onApprove, 
+  onOverride, 
+  isApproving, 
+  hideActions = false,
+  tableColumns = defaultTableColumns,
+  tableData = defaultTableData,
+  initialAssumptions,
+  initialMessage
+}: ArtifactEditorProps) {
   const [showDiff, setShowDiff] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [isEditingQuery, setIsEditingQuery] = useState(false);
   const [hasEditedQuery, setHasEditedQuery] = useState(false);
-  const [assumptions, setAssumptions] = useState<Assumption[]>(defaultAssumptions);
-  const [message, setMessage] = useState(defaultMessage);
+  const [assumptions, setAssumptions] = useState<Assumption[]>(initialAssumptions || defaultAssumptions);
+  const [message, setMessage] = useState(initialMessage || defaultMessage);
   const [queryCode, setQueryCode] = useState(() => 
     code.filter(line => line.type !== 'removed').map(line => line.content).join('\n')
   );
@@ -893,23 +915,38 @@ export function ArtifactEditor({ code, annotations = [], onApprove, onOverride, 
                           <UITable>
                             <TableHeader>
                               <TableRow className="border-border">
-                                <TableHead className="text-xs h-8 px-2">store_name</TableHead>
-                                <TableHead className="text-xs h-8 px-2">month</TableHead>
-                                <TableHead className="text-xs h-8 px-2">year</TableHead>
-                                <TableHead className="text-xs h-8 px-2 text-right">total_revenue</TableHead>
+                                {tableColumns.map((col) => (
+                                  <TableHead 
+                                    key={col.key} 
+                                    className={cn(
+                                      "text-xs h-8 px-2",
+                                      col.align === 'right' && "text-right"
+                                    )}
+                                  >
+                                    {col.label}
+                                  </TableHead>
+                                ))}
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {demoTableData.map((row, index) => (
+                              {tableData.map((row, index) => (
                                 <TableRow 
                                   key={index} 
                                   className="border-border cursor-text select-text"
                                   onMouseUp={() => handleTextSelect('table', `row-${index}`, tableRef)}
                                 >
-                                  <TableCell className="text-xs py-2 px-2 font-medium">{row.store_name}</TableCell>
-                                  <TableCell className="text-xs py-2 px-2">{row.month}</TableCell>
-                                  <TableCell className="text-xs py-2 px-2">{row.year}</TableCell>
-                                  <TableCell className="text-xs py-2 px-2 text-right font-mono text-success">{row.total_revenue}</TableCell>
+                                  {tableColumns.map((col, colIdx) => (
+                                    <TableCell 
+                                      key={col.key} 
+                                      className={cn(
+                                        "text-xs py-2 px-2",
+                                        colIdx === 0 && "font-medium",
+                                        col.align === 'right' && "text-right font-mono text-success"
+                                      )}
+                                    >
+                                      {String(row[col.key] ?? '')}
+                                    </TableCell>
+                                  ))}
                                 </TableRow>
                               ))}
                             </TableBody>
