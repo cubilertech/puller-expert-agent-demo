@@ -102,6 +102,16 @@ export function ArtifactEditor({
   const [queryCode, setQueryCode] = useState(() => 
     code.filter(line => line.type !== 'removed').map(line => line.content).join('\n')
   );
+  
+  // Reset state when task data changes
+  useEffect(() => {
+    setAssumptions(initialAssumptions || defaultAssumptions);
+    setMessage(initialMessage || defaultMessage);
+    setQueryCode(code.filter(line => line.type !== 'removed').map(line => line.content).join('\n'));
+    setIsEditingMessage(false);
+    setIsEditingQuery(false);
+    setHasEditedQuery(false);
+  }, [initialAssumptions, initialMessage, code]);
   const [assumptionsExpanded, setAssumptionsExpanded] = useState(true);
   const [messageExpanded, setMessageExpanded] = useState(true);
   const [queryExpanded, setQueryExpanded] = useState(false);
