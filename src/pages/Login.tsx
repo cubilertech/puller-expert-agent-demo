@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
-import { Lock, Mail, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import pullerLogo from '@/assets/puller-logo.png';
 
 // Validation schema
 const loginSchema = z.object({
@@ -74,25 +75,108 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background grid */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Grid pattern */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, hsl(var(--primary)) 1px, transparent 1px),
+              linear-gradient(to bottom, hsl(var(--primary)) 1px, transparent 1px)
+            `,
+            backgroundSize: '60px 60px'
+          }}
+        />
+        
+        {/* Radial glow effects */}
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3]
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-primary/20 rounded-full blur-[120px]"
+        />
+        <motion.div
+          animate={{
+            scale: [1.2, 1, 1.2],
+            opacity: [0.2, 0.4, 0.2]
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+          className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-cyan-500/20 rounded-full blur-[120px]"
+        />
+        
+        {/* Floating dots/nodes */}
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-2 h-2 bg-primary/40 rounded-full"
+            style={{
+              left: `${15 + i * 15}%`,
+              top: `${20 + (i % 3) * 25}%`
+            }}
+            animate={{
+              y: [0, -20, 0],
+              opacity: [0.3, 0.7, 0.3]
+            }}
+            transition={{
+              duration: 4 + i,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: i * 0.5
+            }}
+          />
+        ))}
+        
+        {/* Connecting lines */}
+        <svg className="absolute inset-0 w-full h-full opacity-10">
+          <motion.line
+            x1="10%" y1="30%" x2="30%" y2="50%"
+            stroke="hsl(var(--primary))"
+            strokeWidth="1"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 2, delay: 0.5 }}
+          />
+          <motion.line
+            x1="70%" y1="20%" x2="90%" y2="40%"
+            stroke="hsl(var(--primary))"
+            strokeWidth="1"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 2, delay: 1 }}
+          />
+          <motion.line
+            x1="60%" y1="70%" x2="85%" y2="85%"
+            stroke="hsl(var(--primary))"
+            strokeWidth="1"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 2, delay: 1.5 }}
+          />
+        </svg>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative z-10"
       >
         {/* Logo/Header */}
         <div className="text-center mb-8">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
+            initial={{ scale: 0, rotate: -10 }}
+            animate={{ scale: 1, rotate: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
-            className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4"
+            className="w-20 h-20 flex items-center justify-center mx-auto mb-4"
           >
-            <Lock className="w-8 h-8 text-primary-foreground" />
+            <img src={pullerLogo} alt="Puller AI" className="w-full h-full object-contain" />
           </motion.div>
-          <h1 className="text-2xl font-bold text-foreground">Command Center</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to access the control tower</p>
+          <h1 className="text-2xl font-bold text-foreground">Puller's Command Center</h1>
+          <p className="text-sm text-muted-foreground mt-1">Sign in to access the control centre</p>
         </div>
 
         {/* Login Form */}
@@ -193,7 +277,7 @@ export default function Login() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Protected access • Puller AI Command Center
+          Protected access • Puller AI Control Centre
         </p>
       </motion.div>
     </div>
