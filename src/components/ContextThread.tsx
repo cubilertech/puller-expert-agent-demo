@@ -180,18 +180,18 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-border">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <MessageSquare className="w-3.5 h-3.5 text-primary" />
-          <h3 className="font-semibold text-xs text-foreground">Workflow Thread</h3>
+      <div className="px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-2 mb-1">
+          <MessageSquare className="w-4 h-4 text-primary" />
+          <h3 className="font-semibold text-sm text-foreground">Workflow Thread</h3>
         </div>
-        <p className="text-[10px] text-muted-foreground truncate">{taskTitle}</p>
+        <p className="text-xs text-muted-foreground truncate">{taskTitle}</p>
       </div>
 
       {/* Messages */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto scrollbar-thin px-2 py-2 space-y-0.5"
+        className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4 space-y-3"
       >
         {messages.map((message, index) => {
           const { icon: Icon, color, label } = senderConfig[message.sender];
@@ -216,39 +216,39 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                 initial="hidden"
                 animate="visible"
                 transition={{ delay: cumulativeDelay }}
-                className={cn(
-                  'rounded-md p-2 relative z-10',
+              className={cn(
+                  'rounded-lg p-4 relative z-10',
                   typeStyles[message.type]
                 )}
               >
-                <div className="flex items-center gap-1.5 mb-1">
+                <div className="flex items-center gap-2 mb-2">
                   <motion.div 
                     variants={avatarVariants}
-                    className={cn('w-5 h-5 rounded-full flex items-center justify-center', color)}
+                    className={cn('w-7 h-7 rounded-full flex items-center justify-center', color)}
                   >
-                    <Icon className="w-3 h-3 text-foreground" />
+                    <Icon className="w-4 h-4 text-foreground" />
                   </motion.div>
                   
                   <motion.span 
                     variants={labelVariants}
-                    className="text-[10px] font-medium text-foreground"
+                    className="text-xs font-medium text-foreground"
                   >
                     {label}
                   </motion.span>
                   
                   <motion.span 
                     variants={labelVariants}
-                    className="text-[10px] text-muted-foreground ml-auto"
+                    className="text-xs text-muted-foreground ml-auto"
                   >
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </motion.span>
                 </div>
                 
-                <div className="pl-6">
+                <div className="pl-9">
                   {/* Selectable content - highlight to comment */}
                   <motion.p 
                     variants={contentVariants}
-                    className="text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text select-text"
+                    className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text select-text"
                     onMouseUp={() => handleTextSelection(message.id)}
                   >
                     {message.content}
@@ -258,16 +258,16 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                   {hasAssumptions && (
                     <motion.div 
                       variants={badgeVariants}
-                      className="mt-3"
+                      className="mt-4"
                     >
                       <button
                         onClick={() => toggleAssumptions(message.id)}
-                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors mb-1"
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
                       >
                         {isExpanded ? (
-                          <ChevronDown className="w-3.5 h-3.5" />
+                          <ChevronDown className="w-4 h-4" />
                         ) : (
-                          <ChevronRight className="w-3.5 h-3.5" />
+                          <ChevronRight className="w-4 h-4" />
                         )}
                         <span className="font-medium">Assumptions ({message.assumptions!.length})</span>
                       </button>
@@ -277,13 +277,13 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="bg-muted/50 rounded p-1.5 border border-border/50"
+                          className="bg-muted/50 rounded-md p-3 border border-border/50"
                         >
-                          <ul className="space-y-0.5">
+                          <ul className="space-y-2">
                             {message.assumptions!.map((assumption, idx) => (
                               <li 
                                 key={idx}
-                                className="text-[10px] text-muted-foreground flex items-start gap-1.5"
+                                className="text-xs text-muted-foreground flex items-start gap-2"
                               >
                                 <span className="text-primary/60 mt-0.5">•</span>
                                 <span>{assumption}</span>
@@ -299,9 +299,9 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                   {message.type === 'reasoning' && (
                     <motion.div 
                       variants={badgeVariants}
-                      className="mt-1 flex items-center gap-1"
+                      className="mt-3 flex items-center gap-1"
                     >
-                      <span className="text-[9px] text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] text-primary/70 bg-primary/10 px-2 py-1 rounded">
                         REASONING
                       </span>
                     </motion.div>
@@ -309,9 +309,9 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                   {message.type === 'action' && (
                     <motion.div 
                       variants={badgeVariants}
-                      className="mt-1 flex items-center gap-1"
+                      className="mt-3 flex items-center gap-1"
                     >
-                      <span className="text-[9px] text-warning bg-warning/10 px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] text-warning bg-warning/10 px-2 py-1 rounded">
                         ACTION
                       </span>
                     </motion.div>
@@ -348,24 +348,24 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="relative"
               >
-                <div className="rounded-md p-2 bg-warning/5 border border-warning/20 relative z-10">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <div className="w-5 h-5 rounded-full bg-warning flex items-center justify-center">
-                      <Quote className="w-2.5 h-2.5 text-warning-foreground" />
+              <div className="rounded-lg p-4 bg-warning/5 border border-warning/20 relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-full bg-warning flex items-center justify-center">
+                      <Quote className="w-3.5 h-3.5 text-warning-foreground" />
                     </div>
-                    <span className="text-[10px] font-medium text-foreground">Comment</span>
-                    <span className="text-[10px] text-muted-foreground ml-auto">
+                    <span className="text-xs font-medium text-foreground">Comment</span>
+                    <span className="text-xs text-muted-foreground ml-auto">
                       {comment.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   
-                  <div className="pl-6">
+                  <div className="pl-9">
                     {/* Quoted text - clickable to scroll to source */}
                     <button
                       onClick={scrollToSource}
-                      className="w-full text-left bg-muted/50 border-l-2 border-warning/50 pl-2 py-1 rounded-r mb-1 hover:bg-muted/70 transition-colors group"
+                      className="w-full text-left bg-muted/50 border-l-2 border-warning/50 pl-3 py-2 rounded-r mb-2 hover:bg-muted/70 transition-colors group"
                     >
-                      <p className="text-[10px] text-muted-foreground italic group-hover:text-foreground/70 transition-colors">
+                      <p className="text-xs text-muted-foreground italic group-hover:text-foreground/70 transition-colors">
                         "{comment.quotedText.length > 80 
                           ? comment.quotedText.slice(0, 80) + '...' 
                           : comment.quotedText}"
@@ -373,7 +373,7 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                     </button>
                     
                     {/* Comment text */}
-                    <p className="text-xs text-foreground/90">{comment.comment}</p>
+                    <p className="text-sm text-foreground/90">{comment.comment}</p>
                   </div>
                 </div>
               </motion.div>
@@ -434,9 +434,9 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
       </AnimatePresence>
 
       {/* Input area placeholder */}
-      <div className="px-2 py-1.5 border-t border-border">
-        <div className="flex items-center gap-1.5 px-2 py-1.5 bg-muted/50 rounded text-muted-foreground text-[10px]">
-          <Bot className="w-3 h-3" />
+      <div className="px-4 py-3 border-t border-border">
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50 rounded-lg text-muted-foreground text-xs">
+          <Bot className="w-4 h-4" />
           <span>Agent awaiting review...</span>
         </div>
       </div>
