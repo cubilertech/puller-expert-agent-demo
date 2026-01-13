@@ -4,6 +4,14 @@ export type SentStatus = 'pending' | 'viewed' | 'awaiting_response';
 
 export type TaskSource = 'email' | 'slack' | 'meeting';
 
+export type IndustryVertical = 
+  | 'retail-ecommerce'
+  | 'grocery-mass-merch'
+  | 'cpg-consumer-brands'
+  | 'hospitality-restaurants'
+  | 'fashion-shoes'
+  | 'media-entertainment';
+
 export interface TaskFlags {
   urgency: boolean;       // Time-sensitive processing
   humanRequested: boolean; // Customer wants escalation
@@ -21,6 +29,7 @@ export interface Task {
   source: TaskSource;
   flags: TaskFlags;
   confidence: number; // 0-100, triggers review if below threshold
+  industry?: IndustryVertical; // Industry vertical for demo categorization
   sentStatus?: SentStatus; // For sent tasks: pending, viewed, awaiting_response
   sentAt?: Date; // When the response was sent to requestor
   requestorFeedback?: 'positive' | 'negative' | null; // Feedback from requestor
@@ -39,6 +48,37 @@ export interface CodeDiff {
   lineNumber: number;
   type: 'unchanged' | 'added' | 'removed';
   content: string;
+}
+
+export interface SqlAnnotation {
+  lineStart: number;
+  lineEnd: number;
+  title: string;
+  description: string;
+  type: 'selection' | 'source' | 'aggregation' | 'filter' | 'grouping' | 'ordering' | 'expert';
+}
+
+export interface TableColumn {
+  key: string;
+  label: string;
+  align?: 'left' | 'center' | 'right';
+}
+
+export interface Assumption {
+  id: string;
+  text: string;
+  includeInMessage: boolean;
+}
+
+export interface TaskData {
+  messages: ChatMessage[];
+  code: CodeDiff[];
+  annotations: SqlAnnotation[];
+  tableColumns: TableColumn[];
+  tableData: Record<string, string | number>[];
+  knowledgeUpdate: string;
+  responseMessage: string;
+  assumptions: Assumption[];
 }
 
 export interface KnowledgeNode {
