@@ -22,7 +22,7 @@ const loginSchema = z.object({
 // Valid credentials (in production, this would be handled server-side)
 const VALID_CREDENTIALS = {
   email: "zac@puller.ai",
-  password: "puller@cammandcenter40"
+  password: "123456"
 };
 export default function Login() {
   const navigate = useNavigate();
