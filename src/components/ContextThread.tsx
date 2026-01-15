@@ -854,7 +854,7 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
           />
         )}
 
-        {/* Stage 3: Agent Result Messages - with delay after thinking */}
+        {/* Stage 3: Agent Result Messages */}
         <AnimatePresence>
           {flowStage === 'result' || flowStage === 'artifacts' ? (
             <>
@@ -862,187 +862,10 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
                 const isLastVisible = index === visibleMessageIndex - 1;
                 const isLastMessage = isLastVisible && flowStage !== 'artifacts' && threadComments.length === 0;
                 const isRevealed = revealedMessages.has(message.id);
-                const hasAssumptions = message.assumptions && message.assumptions.length > 0;
-                const isExpanded = expandedAssumptions[message.id];
-                
-                // Determine colors based on message type
-                const { bgColor, color, Icon, label } = (() => {
-                  switch (message.type) {
-                    case 'reasoning':
-                      return { 
-                        bgColor: 'bg-primary/10', 
-                        color: 'bg-primary/20', 
-                        Icon: Brain, 
-                        label: 'Agent Analysis' 
-                      };
-                    case 'action':
-                      return { 
-                        bgColor: 'bg-warning/10', 
-                        color: 'bg-warning/20', 
-                        Icon: Sparkles, 
-                        label: 'Agent Action' 
-                      };
-                    default:
-                      return { 
-                        bgColor: 'bg-secondary/20', 
-                        color: 'bg-secondary/30', 
-                        Icon: MessageSquare, 
-                        label: 'Agent' 
-                      };
-                  }
-                })();
                 
                 return (
-                  <motion.div 
-                    key={message.id}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index === 0 ? 0.8 : 0.3, duration: 0.4 }}
-                  >
-                    {/* Agent Header */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <motion.div 
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: index === 0 ? 0.9 : 0.4 }}
-                        className={cn('w-7 h-7 rounded-full flex items-center justify-center', color)}
-                      >
-                        <Icon className="w-4 h-4 text-foreground" />
-                      </motion.div>
-                      
-                      <motion.span 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index === 0 ? 1.0 : 0.5 }}
-                        className="text-xs font-medium text-foreground"
-                      >
-                        {label}
-                      </motion.span>
-                      
-                      <motion.span 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index === 0 ? 1.0 : 0.5 }}
-                        className="text-xs text-muted-foreground ml-auto"
-                      >
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </motion.span>
-                    </div>
-                    
-                    <div className="pl-9">
-                      {/* Assumptions FIRST - before result content */}
-                      {hasAssumptions && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index === 0 ? 1.1 : 0.6 }}
-                          className="mb-4"
-                        >
-                          <button
-                            onClick={() => toggleAssumptions(message.id)}
-                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="w-4 h-4" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4" />
-                            )}
-                            <span className="font-medium">Assumptions ({message.assumptions!.length})</span>
-                          </button>
-                          
-                          <AnimatePresence>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="bg-muted/50 rounded-md p-3 border border-border/50 overflow-hidden"
-                              >
-                                <ul className="space-y-2">
-                                  {message.assumptions!.map((assumption, idx) => {
-                                    const shouldTypeAssumption = !revealedMessages.has(`${message.id}-assumption-${idx}`);
-                                    return (
-                                      <motion.li 
-                                        key={idx}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: idx * 0.15 }}
-                                        className="text-xs text-muted-foreground flex items-start gap-2"
-                                      >
-                                        <motion.span 
-                                          initial={{ opacity: 0 }}
-                                          animate={{ opacity: 1 }}
-                                          transition={{ delay: idx * 0.15 + 0.1 }}
-                                          className="text-primary/60 mt-0.5 flex-shrink-0"
-                                        >
-                                          •
-                                        </motion.span>
-                                        <span className="flex-1">
-                                          {shouldTypeAssumption ? (
-                                            <TypingText 
-                                              text={assumption} 
-                                              speed={18}
-                                              delay={idx * 350 + 100}
-                                              onComplete={() => handleMessageTypingComplete(`${message.id}-assumption-${idx}`)}
-                                            />
-                                          ) : (
-                                            assumption
-                                          )}
-                                        </span>
-                                      </motion.li>
-                                    );
-                                  })}
-                                </ul>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
-                      )}
-                      
-                      {/* Result Description with typing effect */}
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index === 0 ? 1.3 : 0.8 }}
-                      >
-                        <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text select-text">
-                          {!isRevealed ? (
-                            <TypingText 
-                              text={message.content} 
-                              speed={12}
-                              delay={index === 0 ? 400 : 200}
-                              onComplete={() => handleMessageTypingComplete(message.id)}
-                            />
-                          ) : (
-                            message.content
-                          )}
-                        </p>
-                      </motion.div>
-                      
-                      {/* Badges */}
-                      {message.type === 'reasoning' && isRevealed && (
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="mt-3 flex items-center gap-1"
-                        >
-                          <span className="text-[10px] text-primary/70 bg-primary/10 px-2 py-1 rounded">
-                            REASONING
-                          </span>
-                        </motion.div>
-                      )}
-                      {message.type === 'action' && isRevealed && (
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="mt-3 flex items-center gap-1"
-                        >
-                          <span className="text-[10px] text-warning bg-warning/10 px-2 py-1 rounded">
-                            ACTION
-                          </span>
-                        </motion.div>
-                      )}
-                    </div>
+                  <div key={message.id}>
+                    {renderMessage(message, index, isLastVisible, isLastMessage, true)}
                     
                     {/* Show loading indicator between messages */}
                     {isLastVisible && flowStage === 'result' && visibleMessageIndex < agentMessages.length && isRevealed && (
@@ -1071,16 +894,15 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
                         <span className="text-xs text-muted-foreground">Processing...</span>
                       </motion.div>
                     )}
-                  </motion.div>
+                  </div>
                 );
               })}
               
-              {/* Generating first message indicator with delay */}
+              {/* Generating first message indicator */}
               {flowStage === 'result' && visibleMessageIndex === 0 && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
                   exit={{ opacity: 0 }}
                   className="flex items-center gap-2 px-4 py-3 text-muted-foreground"
                 >
