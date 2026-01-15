@@ -357,30 +357,40 @@ function ThinkingSteps({
                                 stage.description
                               )}
                             </p>
-                            {/* Detail sub-steps */}
+                            {/* Detail sub-steps with typing effect */}
                             <ul className="space-y-0.5">
                               {stage.details.map((detail, detailIdx) => (
                                 <motion.li
                                   key={detailIdx}
                                   initial={{ opacity: 0, x: -5 }}
                                   animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: detailIdx * 0.05 }}
-                                  className="text-[10px] text-muted-foreground/80 flex items-center gap-1.5"
+                                  transition={{ delay: detailIdx * 0.1 }}
+                                  className="text-[10px] text-muted-foreground/80 flex items-start gap-1.5"
                                 >
                                   {isComplete ? (
-                                    <span className="text-primary/60">✓</span>
+                                    <span className="text-primary/60 flex-shrink-0">✓</span>
                                   ) : isCurrent ? (
                                     <motion.span
                                       animate={{ opacity: [0.3, 1, 0.3] }}
                                       transition={{ duration: 1, repeat: Infinity, delay: detailIdx * 0.2 }}
-                                      className="text-primary"
+                                      className="text-primary flex-shrink-0"
                                     >
                                       →
                                     </motion.span>
                                   ) : (
-                                    <span className="text-muted-foreground/40">○</span>
+                                    <span className="text-muted-foreground/40 flex-shrink-0">○</span>
                                   )}
-                                  {detail}
+                                  <span className="flex-1">
+                                    {isCurrent ? (
+                                      <TypingText 
+                                        text={detail} 
+                                        speed={20} 
+                                        delay={detailIdx * 400 + 200}
+                                      />
+                                    ) : (
+                                      detail
+                                    )}
+                                  </span>
                                 </motion.li>
                               ))}
                             </ul>
