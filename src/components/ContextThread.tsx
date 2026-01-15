@@ -64,13 +64,15 @@ function TypingText({ text, delay = 0, speed = 15, onComplete }: {
 // Flow stages for the context thread
 type FlowStage = 'requestor' | 'thinking' | 'result' | 'artifacts';
 
-// Thinking out loud component synced with task status
+// Thinking out loud component - persists and is collapsible like ChatGPT research
 function ThinkingSteps({ 
   currentStatus, 
-  onComplete 
+  onComplete,
+  isComplete: externalIsComplete = false
 }: { 
   currentStatus: TaskStatus;
   onComplete?: () => void;
+  isComplete?: boolean;
 }) {
   // Get the current stage index based on the actual task status
   const currentStageIndex = processingStages.findIndex(s => s.status === currentStatus);
@@ -78,9 +80,21 @@ function ThinkingSteps({
   const [completedStages, setCompletedStages] = useState<Set<TaskStatus>>(new Set());
   const previousStatus = useRef<TaskStatus | null>(null);
   const hasCompleted = useRef(false);
+  const [isExpanded, setIsExpanded] = useState(true);
+  
+  // Determine if all stages are done
+  const allComplete = externalIsComplete || completedStages.size === processingStages.length;
   
   // Sync completed stages with actual task status
   useEffect(() => {
+    if (externalIsComplete) {
+      // Mark all stages as complete
+      const allStages = new Set(processingStages.map(s => s.status));
+      setCompletedStages(allStages);
+      setIsExpanded(false); // Collapse when complete
+      return;
+    }
+    
     if (!isProcessing) {
       // Task has moved past processing stages (e.g., to 'review')
       // Mark all stages as complete
@@ -89,6 +103,7 @@ function ThinkingSteps({
       
       if (!hasCompleted.current) {
         hasCompleted.current = true;
+        setIsExpanded(false); // Collapse when complete
         setTimeout(() => {
           onComplete?.();
         }, 300);
@@ -106,126 +121,213 @@ function ThinkingSteps({
     setCompletedStages(newCompleted);
     
     previousStatus.current = currentStatus;
-  }, [currentStatus, currentStageIndex, isProcessing, onComplete]);
+  }, [currentStatus, currentStageIndex, isProcessing, onComplete, externalIsComplete]);
   
   // Reset completion tracking when status resets
   useEffect(() => {
     if (currentStageIndex === 0) {
       hasCompleted.current = false;
+      setIsExpanded(true);
     }
   }, [currentStageIndex]);
   
-  if (!isProcessing && completedStages.size === 0) return null;
+  // Calculate time taken (mock for demo)
+  const processingTime = allComplete ? "2.4s" : null;
   
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="mb-4 p-3 bg-muted/30 rounded-lg border border-border/50"
+      className={cn(
+        "mb-4 rounded-lg border transition-colors",
+        allComplete 
+          ? "bg-muted/20 border-border/30" 
+          : "bg-muted/30 border-border/50"
+      )}
     >
-      <div className="flex items-center gap-2 mb-3">
-        <Brain className="w-4 h-4 text-primary animate-pulse" />
-        <span className="text-xs font-medium text-foreground">Agent Thinking</span>
-      </div>
-      
-      {/* Progress bar synced with task card */}
-      <div className="flex items-center gap-1 mb-3">
-        {processingStages.map((stage, idx) => (
-          <div
-            key={stage.status}
-            className={cn(
-              'flex-1 h-1 rounded-full transition-colors duration-300',
-              idx < currentStageIndex ? 'bg-primary' : 
-              idx === currentStageIndex ? 'bg-primary animate-pulse' : 
-              'bg-muted'
-            )}
-          />
-        ))}
-      </div>
-      
-      <div className="space-y-2">
-        {processingStages.map((stage, idx) => {
-          const Icon = stage.icon;
-          const isComplete = completedStages.has(stage.status);
-          const isCurrent = idx === currentStageIndex && !isComplete;
-          const isPending = idx > currentStageIndex;
-          
-          return (
-            <motion.div
-              key={stage.status}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ 
-                opacity: isPending ? 0.4 : 1, 
-                x: 0 
-              }}
-              transition={{ delay: idx * 0.1 }}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md transition-all",
-                isCurrent && "bg-primary/10 border border-primary/30",
-                isComplete && "bg-muted/50"
-              )}
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center gap-2 p-3 hover:bg-muted/30 transition-colors rounded-lg"
+      >
+        {isExpanded ? (
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        )}
+        
+        {allComplete ? (
+          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+            <motion.svg 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-3 h-3 text-primary" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="3"
             >
-              <div className={cn(
-                "w-6 h-6 rounded-full flex items-center justify-center",
-                isComplete && "bg-primary/20 text-primary",
-                isCurrent && "bg-primary text-primary-foreground",
-                isPending && "bg-muted text-muted-foreground"
-              )}>
-                {isComplete ? (
-                  <motion.svg 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="w-3.5 h-3.5" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="3"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </motion.svg>
-                ) : isCurrent ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Icon className="w-3.5 h-3.5" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </motion.svg>
+          </div>
+        ) : (
+          <Brain className="w-4 h-4 text-primary animate-pulse" />
+        )}
+        
+        <span className="text-xs font-medium text-foreground">
+          {allComplete ? "Thought Process" : "Agent Thinking"}
+        </span>
+        
+        {/* Progress indicator in header when collapsed */}
+        {!isExpanded && !allComplete && (
+          <div className="flex items-center gap-1 ml-2">
+            {processingStages.map((stage, idx) => (
+              <div
+                key={stage.status}
+                className={cn(
+                  'w-6 h-1 rounded-full transition-colors duration-300',
+                  idx < currentStageIndex ? 'bg-primary' : 
+                  idx === currentStageIndex ? 'bg-primary animate-pulse' : 
+                  'bg-muted'
                 )}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className={cn(
-                  "text-xs font-medium",
-                  isCurrent && "text-primary",
-                  isComplete && "text-foreground",
-                  isPending && "text-muted-foreground"
-                )}>
-                  {stage.label}
+              />
+            ))}
+          </div>
+        )}
+        
+        {/* Completion badge */}
+        {allComplete && (
+          <span className="ml-auto text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+            Completed {processingTime && `in ${processingTime}`}
+          </span>
+        )}
+        
+        {/* Active stage indicator when collapsed */}
+        {!isExpanded && !allComplete && (
+          <span className="ml-auto text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded flex items-center gap-1">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            {processingStages[currentStageIndex]?.label || 'Processing'}
+          </span>
+        )}
+      </button>
+      
+      {/* Expandable Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3 space-y-2">
+              {/* Progress bar synced with task card */}
+              {!allComplete && (
+                <div className="flex items-center gap-1 mb-2">
+                  {processingStages.map((stage, idx) => (
+                    <div
+                      key={stage.status}
+                      className={cn(
+                        'flex-1 h-1 rounded-full transition-colors duration-300',
+                        idx < currentStageIndex ? 'bg-primary' : 
+                        idx === currentStageIndex ? 'bg-primary animate-pulse' : 
+                        'bg-muted'
+                      )}
+                    />
+                  ))}
                 </div>
-                {isCurrent && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-[10px] text-muted-foreground mt-0.5"
-                  >
-                    <TypingText text={stage.description} speed={20} />
-                  </motion.div>
-                )}
-              </div>
-              
-              {isCurrent && (
-                <motion.div
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                  className="flex gap-0.5"
-                >
-                  <span className="w-1 h-1 rounded-full bg-primary" />
-                  <span className="w-1 h-1 rounded-full bg-primary" />
-                  <span className="w-1 h-1 rounded-full bg-primary" />
-                </motion.div>
               )}
-            </motion.div>
-          );
-        })}
-      </div>
+              
+              {processingStages.map((stage, idx) => {
+                const Icon = stage.icon;
+                const isComplete = completedStages.has(stage.status);
+                const isCurrent = idx === currentStageIndex && !isComplete && !allComplete;
+                const isPending = idx > currentStageIndex && !allComplete;
+                
+                return (
+                  <motion.div
+                    key={stage.status}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ 
+                      opacity: isPending ? 0.4 : 1, 
+                      x: 0 
+                    }}
+                    transition={{ delay: idx * 0.05 }}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-md transition-all",
+                      isCurrent && "bg-primary/10 border border-primary/30",
+                      (isComplete || allComplete) && "bg-muted/30"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0",
+                      (isComplete || allComplete) && "bg-primary/20 text-primary",
+                      isCurrent && "bg-primary text-primary-foreground",
+                      isPending && "bg-muted text-muted-foreground"
+                    )}>
+                      {(isComplete || allComplete) ? (
+                        <motion.svg 
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="w-3.5 h-3.5" 
+                          viewBox="0 0 24 24" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          strokeWidth="3"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </motion.svg>
+                      ) : isCurrent ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Icon className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className={cn(
+                        "text-xs font-medium",
+                        isCurrent && "text-primary",
+                        (isComplete || allComplete) && "text-foreground",
+                        isPending && "text-muted-foreground"
+                      )}>
+                        {stage.label}
+                      </div>
+                      {/* Show description for current step or all completed steps */}
+                      {(isCurrent || (allComplete && isExpanded)) && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-[10px] text-muted-foreground mt-0.5"
+                        >
+                          {isCurrent ? (
+                            <TypingText text={stage.description} speed={20} />
+                          ) : (
+                            stage.description.replace('...', ' ✓')
+                          )}
+                        </motion.div>
+                      )}
+                    </div>
+                    
+                    {isCurrent && (
+                      <motion.div
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        className="flex gap-0.5"
+                      >
+                        <span className="w-1 h-1 rounded-full bg-primary" />
+                        <span className="w-1 h-1 rounded-full bg-primary" />
+                        <span className="w-1 h-1 rounded-full bg-primary" />
+                      </motion.div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -645,15 +747,14 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
           ))}
         </AnimatePresence>
 
-        {/* Stage 2: Thinking Steps - Show during thinking phase */}
-        <AnimatePresence>
-          {flowStage === 'thinking' && taskStatus && (
-            <ThinkingSteps 
-              currentStatus={taskStatus} 
-              onComplete={handleThinkingComplete}
-            />
-          )}
-        </AnimatePresence>
+        {/* Stage 2: Thinking Steps - Persists after completion like ChatGPT research */}
+        {(flowStage === 'thinking' || flowStage === 'result' || flowStage === 'artifacts') && taskStatus && (
+          <ThinkingSteps 
+            currentStatus={taskStatus} 
+            onComplete={handleThinkingComplete}
+            isComplete={flowStage === 'result' || flowStage === 'artifacts'}
+          />
+        )}
 
         {/* Stage 3: Agent Result Messages */}
         <AnimatePresence>
