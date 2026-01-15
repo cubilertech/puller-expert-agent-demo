@@ -123,16 +123,7 @@ function TypingText({ text, delay = 0, speed = 15, onComplete }: {
   }, [text, delay, speed, onComplete]);
   
   return (
-    <span>
-      {displayedText}
-      {!isComplete && (
-        <motion.span
-          animate={{ opacity: [1, 0] }}
-          transition={{ duration: 0.5, repeat: Infinity }}
-          className="inline-block w-0.5 h-4 bg-primary ml-0.5 align-middle"
-        />
-      )}
-    </span>
+    <span>{displayedText}</span>
   );
 }
 
@@ -783,7 +774,7 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: hasAssumptions && isAgentMessage ? 0.8 : 0 }}
+              transition={{ delay: 0 }}
             >
               <motion.p 
                 variants={contentVariants}
@@ -794,7 +785,7 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
                   <TypingText 
                     text={message.content} 
                     speed={12}
-                    delay={hasAssumptions ? message.assumptions!.length * 400 + 300 : 0}
+                    delay={0}
                     onComplete={() => handleMessageTypingComplete(message.id)}
                   />
                 ) : (
