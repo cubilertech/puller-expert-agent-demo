@@ -197,7 +197,7 @@ const task3: Task = {
   id: 'media-3',
   title: 'StreamMax Premium Device Distribution',
   requestor: 'David Chen, Product Analytics',
-  status: 'reasoning',
+  status: 'building',
   timestamp: new Date(Date.now() - 1000 * 60 * 33),
   priority: 'medium',
   description: 'What devices do StreamMax Premium subscribers use most for viewing?',

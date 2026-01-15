@@ -186,7 +186,7 @@ const task3: Task = {
   id: 'retail-3',
   title: 'EcoBrew Pods Browse Abandonment',
   requestor: 'Lisa Park, Digital Marketing',
-  status: 'reasoning',
+  status: 'building',
   timestamp: new Date(Date.now() - 1000 * 60 * 25),
   priority: 'medium',
   description: "How many unique customers viewed EcoBrew Pods online last week but didn't purchase?",

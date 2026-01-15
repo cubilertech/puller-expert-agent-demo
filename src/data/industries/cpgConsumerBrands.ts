@@ -199,7 +199,7 @@ const task3: Task = {
   id: 'cpg-3',
   title: 'ShinePlus Shampoo Cross-Sell Patterns',
   requestor: 'Amanda Wright, Category Lead',
-  status: 'reasoning',
+  status: 'building',
   timestamp: new Date(Date.now() - 1000 * 60 * 28),
   priority: 'medium',
   description: 'What products do customers most commonly buy alongside ShinePlus Shampoo?',

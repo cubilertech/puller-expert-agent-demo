@@ -1,10 +1,10 @@
 import { motion, Variants, AnimatePresence } from 'framer-motion';
-import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2, Brain, Search, FileCheck, Sparkles, Package } from 'lucide-react';
+import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2, Brain, Search, FileCheck, Sparkles, Package, AlertTriangle, Hammer, Gift } from 'lucide-react';
 import { ChatMessage, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-// Processing stages configuration with detailed sub-steps
+// Processing stages configuration with detailed sub-steps based on pipeline
 const processingStages: { 
   status: TaskStatus; 
   label: string; 
@@ -16,44 +16,73 @@ const processingStages: {
     status: 'ingesting', 
     label: 'Ingesting', 
     icon: Search, 
-    description: 'Reading and parsing the request',
+    description: 'Receiving and interpreting the request',
     details: [
-      'Extracting message content and metadata',
-      'Identifying sender and context',
-      'Parsing attachments and references'
+      'Receive request and identify user',
+      'Parse task and extract entities',
+      'Review history and assess urgency',
+      'Infer intent and map terms',
+      'Predict variables and resolve timing'
+    ]
+  },
+  { 
+    status: 'asserting', 
+    label: 'Assert', 
+    icon: AlertTriangle, 
+    description: 'Identifying issues and forming assumptions',
+    details: [
+      'List issues and propose hypotheses',
+      'Rank risks and form assumptions',
+      'Set confidence levels',
+      'Clarify selective criteria',
+      'Record assumptions for validation'
     ]
   },
   { 
     status: 'planning', 
     label: 'Planning', 
     icon: Brain, 
-    description: 'Determining the best approach',
+    description: 'Selecting metrics and defining approach',
     details: [
-      'Matching request to known patterns',
-      'Selecting appropriate workflow template',
-      'Identifying required data sources'
+      'Select metrics and choose tables',
+      'Define joins and set grain',
+      'Apply filters and outline CTEs',
+      'Draft output structure'
     ]
   },
   { 
-    status: 'reasoning', 
-    label: 'Reasoning', 
-    icon: Sparkles, 
-    description: 'Analyzing data and building logic',
+    status: 'building', 
+    label: 'Build', 
+    icon: Hammer, 
+    description: 'Writing queries and constructing logic',
     details: [
-      'Cross-referencing with historical data',
-      'Applying business rules and constraints',
-      'Generating response options'
+      'Write SQL and bring models',
+      'Validate refs and enforce rules',
+      'Optimize structure and flag logic',
+      'Annotate code for clarity'
     ]
   },
   { 
     status: 'validating', 
     label: 'Validating', 
     icon: FileCheck, 
-    description: 'Verifying accuracy and completeness',
+    description: 'Checking accuracy and detecting anomalies',
     details: [
-      'Checking response against policies',
-      'Validating data accuracy',
-      'Confidence scoring'
+      'Check counts and inspect nulls',
+      'Detect drift and compare baseline',
+      'Reconcile anomalies',
+      'Escalate issues if needed'
+    ]
+  },
+  { 
+    status: 'generating', 
+    label: 'Generate Result', 
+    icon: Gift, 
+    description: 'Formatting outputs and delivering artifacts',
+    details: [
+      'Format outputs and generate tables',
+      'Annotate results and attach SQL',
+      'Deliver artifacts to user'
     ]
   },
 ];

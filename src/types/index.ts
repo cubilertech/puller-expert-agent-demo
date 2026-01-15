@@ -1,4 +1,4 @@
-export type TaskStatus = 'ingesting' | 'planning' | 'reasoning' | 'validating' | 'review' | 'sent' | 'approved' | 'learning';
+export type TaskStatus = 'ingesting' | 'asserting' | 'planning' | 'building' | 'validating' | 'generating' | 'review' | 'sent' | 'approved' | 'learning';
 
 export type SentStatus = 'pending' | 'viewed' | 'awaiting_response';
 

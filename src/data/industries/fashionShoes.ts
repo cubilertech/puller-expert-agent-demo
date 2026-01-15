@@ -195,7 +195,7 @@ const task3: Task = {
   id: 'fashion-3',
   title: 'GlowWeave Leggings Purchase Intervals',
   requestor: 'Amanda Chen, CRM Lead',
-  status: 'reasoning',
+  status: 'building',
   timestamp: new Date(Date.now() - 1000 * 60 * 38),
   priority: 'medium',
   description: "What's the average time between repeat purchases of GlowWeave Leggings?",
