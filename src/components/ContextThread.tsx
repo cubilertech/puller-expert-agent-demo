@@ -687,7 +687,7 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
   const renderMessage = (message: ChatMessage, index: number, isLastVisible: boolean, isLastMessage: boolean, isAgentMessage: boolean = false) => {
     const { icon: Icon, color, label } = senderConfig[message.sender];
     const hasAssumptions = message.assumptions && message.assumptions.length > 0;
-    const isExpanded = expandedAssumptions[message.id] ?? true;
+    const isExpanded = expandedAssumptions[message.id] ?? false;
     const isRevealed = revealedMessages.has(message.id);
     const shouldType = isAgentMessage && isLastVisible && !isRevealed;
     
@@ -760,39 +760,18 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
                       className="bg-accent/30 rounded-md p-3 border border-primary/20 overflow-hidden"
                     >
                       <ul className="space-y-2">
-                        {message.assumptions!.map((assumption, idx) => {
-                          const shouldTypeAssumption = !revealedMessages.has(`${message.id}-assumption-${idx}`);
-                          return (
-                            <motion.li 
-                              key={idx}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.15 }}
-                              className="text-xs text-muted-foreground flex items-start gap-2"
-                            >
-                              <motion.span 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: idx * 0.15 + 0.1 }}
-                                className="text-primary/60 mt-0.5 flex-shrink-0"
-                              >
-                                •
-                              </motion.span>
-                              <span className="flex-1">
-                                {shouldTypeAssumption && isLastVisible ? (
-                                  <TypingText 
-                                    text={assumption} 
-                                    speed={18}
-                                    delay={idx * 350 + 100}
-                                    onComplete={() => handleMessageTypingComplete(`${message.id}-assumption-${idx}`)}
-                                  />
-                                ) : (
-                                  assumption
-                                )}
-                              </span>
-                            </motion.li>
-                          );
-                        })}
+                        {message.assumptions!.map((assumption, idx) => (
+                          <motion.li 
+                            key={idx}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="text-xs text-muted-foreground flex items-start gap-2"
+                          >
+                            <span className="text-primary/60 mt-0.5 flex-shrink-0">•</span>
+                            <span className="flex-1">{assumption}</span>
+                          </motion.li>
+                        ))}
                       </ul>
                     </motion.div>
                   )}
