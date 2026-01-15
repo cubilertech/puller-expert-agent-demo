@@ -169,6 +169,7 @@ export default function Index() {
                 <ContextThread
                   messages={taskData?.messages || chatMessages}
                   taskTitle={selectedTask.description}
+                  taskStatus={selectedTask.status}
                 />
               </div>
               
