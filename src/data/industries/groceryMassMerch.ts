@@ -191,7 +191,7 @@ const task3: Task = {
   id: 'grocery-3',
   title: 'OmegaEggs 12ct Substitution Patterns',
   requestor: 'Kevin O\'Brien, Fresh Ops',
-  status: 'reasoning',
+  status: 'building',
   timestamp: new Date(Date.now() - 1000 * 60 * 32),
   priority: 'medium',
   description: 'For OmegaEggs 12ct, how often are customers offered a substitute and what do they accept?',

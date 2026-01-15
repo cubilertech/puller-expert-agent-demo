@@ -200,7 +200,7 @@ const task3: Task = {
   id: 'hospitality-3',
   title: 'HeatBowl Chili 10-Day Reorder Rate',
   requestor: 'Marcus Brown, Menu Development',
-  status: 'reasoning',
+  status: 'building',
   timestamp: new Date(Date.now() - 1000 * 60 * 35),
   priority: 'medium',
   description: 'What percentage of customers who order HeatBowl Chili come back within 10 days?',

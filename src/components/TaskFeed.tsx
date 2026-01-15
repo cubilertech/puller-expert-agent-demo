@@ -35,9 +35,11 @@ interface TaskFeedProps {
 
 const statusConfig: Record<TaskStatus, { icon: typeof Activity; color: string; label: string }> = {
   ingesting: { icon: Clock, color: 'text-muted-foreground', label: 'Ingesting' },
+  asserting: { icon: AlertCircle, color: 'text-info', label: 'Asserting' },
   planning: { icon: Brain, color: 'text-info', label: 'Planning' },
-  reasoning: { icon: Search, color: 'text-info', label: 'Reasoning' },
+  building: { icon: Search, color: 'text-info', label: 'Building' },
   validating: { icon: ShieldCheck, color: 'text-info', label: 'Validating' },
+  generating: { icon: Zap, color: 'text-info', label: 'Generating' },
   review: { icon: AlertCircle, color: 'text-warning', label: 'Expert Review' },
   sent: { icon: Send, color: 'text-info', label: 'Sent' },
   approved: { icon: CheckCircle2, color: 'text-success', label: 'Approved' },
@@ -85,7 +87,7 @@ function formatLapsedTime(sentAt: Date): string {
 }
 
 // Processing pipeline stages
-const pipelineStages: TaskStatus[] = ['ingesting', 'planning', 'reasoning', 'validating'];
+const pipelineStages: TaskStatus[] = ['ingesting', 'asserting', 'planning', 'building', 'validating', 'generating'];
 
 function getStageIndex(status: TaskStatus): number {
   const idx = pipelineStages.indexOf(status);

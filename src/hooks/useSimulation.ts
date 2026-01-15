@@ -5,7 +5,7 @@ import { ghostTaskTemplates } from '@/data/demoData';
 let taskCounter = 10;
 
 // Pipeline stages for automatic progression
-const processingStages: TaskStatus[] = ['ingesting', 'planning', 'reasoning', 'validating'];
+const processingStages: TaskStatus[] = ['ingesting', 'asserting', 'planning', 'building', 'validating', 'generating'];
 
 // Wait period before auto-advancing from Active to Done (in milliseconds)
 const WAIT_PERIOD_MS = 30000; // 30 seconds for demo

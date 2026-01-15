@@ -12,7 +12,7 @@ export const initialTasks: Task[] = [
   // Add a few more in different statuses
   ...allIndustryTasks.slice(3, 6).map((task, idx) => ({
     ...task,
-    status: (['reasoning', 'planning', 'validating'] as const)[idx % 3]
+    status: (['building', 'planning', 'validating'] as const)[idx % 3]
   }))
 ];
 
