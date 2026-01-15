@@ -1,8 +1,16 @@
 import { motion, Variants, AnimatePresence } from 'framer-motion';
-import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2 } from 'lucide-react';
-import { ChatMessage } from '@/types';
+import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2, Brain, Search, FileCheck, Sparkles } from 'lucide-react';
+import { ChatMessage, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+
+// Processing stages configuration
+const processingStages: { status: TaskStatus; label: string; icon: typeof Brain; description: string }[] = [
+  { status: 'ingesting', label: 'Ingesting', icon: Search, description: 'Reading and parsing the request...' },
+  { status: 'planning', label: 'Planning', icon: Brain, description: 'Determining the best approach...' },
+  { status: 'reasoning', label: 'Reasoning', icon: Sparkles, description: 'Analyzing data and building logic...' },
+  { status: 'validating', label: 'Validating', icon: FileCheck, description: 'Verifying accuracy and completeness...' },
+];
 
 // Typing effect component
 function TypingText({ text, delay = 0, speed = 15, onComplete }: { 
@@ -53,6 +61,110 @@ function TypingText({ text, delay = 0, speed = 15, onComplete }: {
   );
 }
 
+// Thinking out loud component
+function ThinkingSteps({ currentStatus }: { currentStatus: TaskStatus }) {
+  const stageIndex = processingStages.findIndex(s => s.status === currentStatus);
+  const isProcessing = stageIndex >= 0;
+  
+  if (!isProcessing) return null;
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-4 p-3 bg-muted/30 rounded-lg border border-border/50"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <Brain className="w-4 h-4 text-primary animate-pulse" />
+        <span className="text-xs font-medium text-foreground">Agent Thinking</span>
+      </div>
+      
+      <div className="space-y-2">
+        {processingStages.map((stage, idx) => {
+          const Icon = stage.icon;
+          const isComplete = idx < stageIndex;
+          const isCurrent = idx === stageIndex;
+          const isPending = idx > stageIndex;
+          
+          return (
+            <motion.div
+              key={stage.status}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ 
+                opacity: isPending ? 0.4 : 1, 
+                x: 0 
+              }}
+              transition={{ delay: idx * 0.1 }}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md transition-all",
+                isCurrent && "bg-primary/10 border border-primary/30",
+                isComplete && "bg-muted/50"
+              )}
+            >
+              <div className={cn(
+                "w-6 h-6 rounded-full flex items-center justify-center",
+                isComplete && "bg-primary/20 text-primary",
+                isCurrent && "bg-primary text-primary-foreground",
+                isPending && "bg-muted text-muted-foreground"
+              )}>
+                {isComplete ? (
+                  <motion.svg 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="w-3.5 h-3.5" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="3"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </motion.svg>
+                ) : isCurrent ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Icon className="w-3.5 h-3.5" />
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className={cn(
+                  "text-xs font-medium",
+                  isCurrent && "text-primary",
+                  isComplete && "text-foreground",
+                  isPending && "text-muted-foreground"
+                )}>
+                  {stage.label}
+                </div>
+                {isCurrent && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-[10px] text-muted-foreground mt-0.5"
+                  >
+                    <TypingText text={stage.description} speed={20} />
+                  </motion.div>
+                )}
+              </div>
+              
+              {isCurrent && (
+                <motion.div
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="flex gap-0.5"
+                >
+                  <span className="w-1 h-1 rounded-full bg-primary" />
+                  <span className="w-1 h-1 rounded-full bg-primary" />
+                  <span className="w-1 h-1 rounded-full bg-primary" />
+                </motion.div>
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
 interface ThreadComment {
   id: string;
   quotedText: string;
@@ -64,6 +176,7 @@ interface ThreadComment {
 interface ContextThreadProps {
   messages: ChatMessage[];
   taskTitle: string;
+  taskStatus?: TaskStatus;
 }
 
 const senderConfig = {
@@ -145,7 +258,8 @@ const badgeVariants: Variants = {
 };
 
 
-export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
+export function ContextThread({ messages, taskTitle, taskStatus }: ContextThreadProps) {
+  const isProcessingTask = taskStatus && ['ingesting', 'planning', 'reasoning', 'validating'].includes(taskStatus);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [expandedAssumptions, setExpandedAssumptions] = useState<Record<string, boolean>>({});
@@ -284,6 +398,10 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
         ref={scrollRef}
         className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4 space-y-3"
       >
+        {/* Thinking Steps - Show during processing */}
+        {isProcessingTask && taskStatus && (
+          <ThinkingSteps currentStatus={taskStatus} />
+        )}
         {/* Generating indicator */}
         <AnimatePresence>
           {isGenerating && visibleMessageIndex === 0 && (
