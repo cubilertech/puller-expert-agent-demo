@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TaskFeed } from '@/components/TaskFeed';
 import { ContextThread } from '@/components/ContextThread';
@@ -31,6 +31,16 @@ export default function Index() {
   const [isLearning, setIsLearning] = useState(false);
   const [learningSignal, setLearningSignal] = useState<LearningSignal | null>(null);
   const [approvedCount, setApprovedCount] = useState(0);
+  const [artifactsReady, setArtifactsReady] = useState(false);
+  const previousTaskId = useRef<string | null>(null);
+
+  // Reset artifacts ready state when task changes
+  useEffect(() => {
+    if (previousTaskId.current !== selectedTaskId) {
+      setArtifactsReady(false);
+      previousTaskId.current = selectedTaskId;
+    }
+  }, [selectedTaskId]);
 
   // Enable simulation for ghost tasks
   useSimulation(true, setTasks);
@@ -170,23 +180,78 @@ export default function Index() {
                   messages={taskData?.messages || chatMessages}
                   taskTitle={selectedTask.description}
                   taskStatus={selectedTask.status}
+                  onArtifactsReady={() => setArtifactsReady(true)}
                 />
               </div>
               
-              {/* Artifact Editor */}
+              {/* Artifact Editor - Show loading state until artifacts are ready */}
               <div className="w-[480px] border-l border-border flex-shrink-0">
-                <ArtifactEditor
-                  code={taskData?.code || originalCode}
-                  annotations={taskData?.annotations || originalCodeAnnotations}
-                  tableColumns={taskData?.tableColumns}
-                  tableData={taskData?.tableData}
-                  initialAssumptions={taskData?.assumptions}
-                  initialMessage={taskData?.responseMessage}
-                  onApprove={handleSendToRequestor}
-                  onOverride={handleOverride}
-                  isApproving={isApproving}
-                  hideActions={selectedTask.status === 'sent' || selectedTask.status === 'approved'}
-                />
+                {artifactsReady || selectedTask.status === 'sent' || selectedTask.status === 'approved' || selectedTask.status === 'review' ? (
+                  <ArtifactEditor
+                    code={taskData?.code || originalCode}
+                    annotations={taskData?.annotations || originalCodeAnnotations}
+                    tableColumns={taskData?.tableColumns}
+                    tableData={taskData?.tableData}
+                    initialAssumptions={taskData?.assumptions}
+                    initialMessage={taskData?.responseMessage}
+                    onApprove={handleSendToRequestor}
+                    onOverride={handleOverride}
+                    isApproving={isApproving}
+                    hideActions={selectedTask.status === 'sent' || selectedTask.status === 'approved'}
+                  />
+                ) : (
+                  <div className="h-full flex flex-col bg-background">
+                    {/* Header */}
+                    <div className="p-3 border-b border-border flex items-center gap-2 flex-shrink-0">
+                      <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                      <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+                    </div>
+                    
+                    {/* Loading skeleton */}
+                    <div className="flex-1 p-4 space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                          <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+                        </div>
+                        <div className="h-24 rounded bg-muted/50 animate-pulse" />
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                          <div className="h-4 w-28 rounded bg-muted animate-pulse" />
+                        </div>
+                        <div className="space-y-2">
+                          {[1, 2, 3].map(i => (
+                            <div key={i} className="flex items-center gap-2">
+                              <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                              <div className="h-3 flex-1 rounded bg-muted/60 animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                          <div className="h-4 w-20 rounded bg-muted animate-pulse" />
+                        </div>
+                        <div className="h-48 rounded bg-muted/40 animate-pulse" />
+                      </div>
+                      
+                      {/* Waiting text */}
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground mt-8">
+                        <div className="flex gap-1">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '0ms' }} />
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '200ms' }} />
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '400ms' }} />
+                        </div>
+                        <span className="text-xs">Waiting for agent response...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

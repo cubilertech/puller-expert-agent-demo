@@ -1,5 +1,5 @@
 import { motion, Variants, AnimatePresence } from 'framer-motion';
-import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2, Brain, Search, FileCheck, Sparkles } from 'lucide-react';
+import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2, Brain, Search, FileCheck, Sparkles, Package } from 'lucide-react';
 import { ChatMessage, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -61,17 +61,58 @@ function TypingText({ text, delay = 0, speed = 15, onComplete }: {
   );
 }
 
-// Thinking out loud component
-function ThinkingSteps({ currentStatus }: { currentStatus: TaskStatus }) {
+// Flow stages for the context thread
+type FlowStage = 'requestor' | 'thinking' | 'result' | 'artifacts';
+
+// Thinking out loud component with completion callback
+function ThinkingSteps({ 
+  currentStatus, 
+  onComplete 
+}: { 
+  currentStatus: TaskStatus;
+  onComplete?: () => void;
+}) {
   const stageIndex = processingStages.findIndex(s => s.status === currentStatus);
   const isProcessing = stageIndex >= 0;
+  const [completedStages, setCompletedStages] = useState<Set<TaskStatus>>(new Set());
+  const [currentStageIndex, setCurrentStageIndex] = useState(0);
   
-  if (!isProcessing) return null;
+  // Animate through stages
+  useEffect(() => {
+    // Reset when status changes
+    setCompletedStages(new Set());
+    setCurrentStageIndex(0);
+    
+    // Animate through each stage
+    const timers: NodeJS.Timeout[] = [];
+    
+    processingStages.forEach((stage, idx) => {
+      // Mark each stage as complete after a delay
+      const completeTimer = setTimeout(() => {
+        setCompletedStages(prev => new Set([...prev, stage.status]));
+        setCurrentStageIndex(idx + 1);
+        
+        // If this is the last stage, call onComplete
+        if (idx === processingStages.length - 1) {
+          setTimeout(() => {
+            onComplete?.();
+          }, 500);
+        }
+      }, (idx + 1) * 800); // Each stage takes 800ms
+      
+      timers.push(completeTimer);
+    });
+    
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [currentStatus, onComplete]);
+  
+  if (!isProcessing && currentStageIndex === 0) return null;
   
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
       className="mb-4 p-3 bg-muted/30 rounded-lg border border-border/50"
     >
       <div className="flex items-center gap-2 mb-3">
@@ -82,9 +123,9 @@ function ThinkingSteps({ currentStatus }: { currentStatus: TaskStatus }) {
       <div className="space-y-2">
         {processingStages.map((stage, idx) => {
           const Icon = stage.icon;
-          const isComplete = idx < stageIndex;
-          const isCurrent = idx === stageIndex;
-          const isPending = idx > stageIndex;
+          const isComplete = completedStages.has(stage.status);
+          const isCurrent = idx === currentStageIndex && !isComplete;
+          const isPending = idx > currentStageIndex;
           
           return (
             <motion.div
@@ -177,6 +218,7 @@ interface ContextThreadProps {
   messages: ChatMessage[];
   taskTitle: string;
   taskStatus?: TaskStatus;
+  onArtifactsReady?: () => void;
 }
 
 const senderConfig = {
@@ -258,17 +300,19 @@ const badgeVariants: Variants = {
 };
 
 
-export function ContextThread({ messages, taskTitle, taskStatus }: ContextThreadProps) {
+export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsReady }: ContextThreadProps) {
   const isProcessingTask = taskStatus && ['ingesting', 'planning', 'reasoning', 'validating'].includes(taskStatus);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [expandedAssumptions, setExpandedAssumptions] = useState<Record<string, boolean>>({});
   
+  // Flow stage management
+  const [flowStage, setFlowStage] = useState<FlowStage>('requestor');
+  const previousTaskTitle = useRef(taskTitle);
+  
   // Track which messages have been "revealed" for typing effect
   const [revealedMessages, setRevealedMessages] = useState<Set<string>>(new Set());
   const [visibleMessageIndex, setVisibleMessageIndex] = useState(0);
-  const [isGenerating, setIsGenerating] = useState(true);
-  const previousTaskTitle = useRef(taskTitle);
   
   // Comment state
   const [threadComments, setThreadComments] = useState<ThreadComment[]>([]);
@@ -278,27 +322,52 @@ export function ContextThread({ messages, taskTitle, taskStatus }: ContextThread
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const commentInputRef = useRef<HTMLInputElement>(null);
 
+  // Separate user messages (requestor) from agent messages (results)
+  const requestorMessages = messages.filter(m => m.sender === 'user');
+  const agentMessages = messages.filter(m => m.sender !== 'user');
+
   // Reset animation state when task changes
   useEffect(() => {
     if (previousTaskTitle.current !== taskTitle) {
+      setFlowStage('requestor');
       setRevealedMessages(new Set());
       setVisibleMessageIndex(0);
-      setIsGenerating(true);
       setExpandedAssumptions({});
       setThreadComments([]);
       previousTaskTitle.current = taskTitle;
+      
+      // Start the thinking phase after showing requestor message
+      setTimeout(() => {
+        setFlowStage('thinking');
+      }, 600);
     }
   }, [taskTitle]);
 
-  // Progressively reveal messages one by one
+  // Handle thinking complete
+  const handleThinkingComplete = useCallback(() => {
+    setFlowStage('result');
+  }, []);
+
+  // Handle artifacts ready
+  const handleResultsComplete = useCallback(() => {
+    setFlowStage('artifacts');
+    onArtifactsReady?.();
+  }, [onArtifactsReady]);
+
+  // Progressively reveal agent messages one by one
   useEffect(() => {
-    if (visibleMessageIndex >= messages.length) {
-      setIsGenerating(false);
+    if (flowStage !== 'result') return;
+    
+    if (visibleMessageIndex >= agentMessages.length) {
+      // All messages revealed, notify artifacts are ready
+      setTimeout(() => {
+        handleResultsComplete();
+      }, 500);
       return;
     }
     
     // Calculate delay based on previous message content length
-    const prevMessage = messages[visibleMessageIndex - 1];
+    const prevMessage = agentMessages[visibleMessageIndex - 1];
     const baseDelay = visibleMessageIndex === 0 ? 300 : 800;
     const contentDelay = prevMessage ? Math.min(prevMessage.content.length * 5, 1500) : 0;
     
@@ -307,7 +376,7 @@ export function ContextThread({ messages, taskTitle, taskStatus }: ContextThread
     }, baseDelay + contentDelay);
     
     return () => clearTimeout(timer);
-  }, [visibleMessageIndex, messages]);
+  }, [visibleMessageIndex, agentMessages, flowStage, handleResultsComplete]);
 
   // Mark message as revealed when typing completes
   const handleMessageTypingComplete = useCallback((messageId: string) => {
@@ -380,7 +449,149 @@ export function ContextThread({ messages, taskTitle, taskStatus }: ContextThread
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [messages.length, threadComments.length]);
+  }, [messages.length, threadComments.length, visibleMessageIndex, flowStage]);
+
+  // Render a single message
+  const renderMessage = (message: ChatMessage, index: number, isLastVisible: boolean, isLastMessage: boolean, isAgentMessage: boolean = false) => {
+    const { icon: Icon, color, label } = senderConfig[message.sender];
+    const hasAssumptions = message.assumptions && message.assumptions.length > 0;
+    const isExpanded = expandedAssumptions[message.id] ?? true;
+    const isRevealed = revealedMessages.has(message.id);
+    const shouldType = isAgentMessage && isLastVisible && !isRevealed;
+    
+    return (
+      <div 
+        key={message.id} 
+        id={`message-${message.id}`}
+        className="relative"
+        ref={isLastMessage ? lastMessageRef : undefined}
+      >
+        <motion.div
+          variants={messageVariants}
+          initial="hidden"
+          animate="visible"
+          className={cn(
+            'rounded-lg p-4 relative z-10',
+            typeStyles[message.type]
+          )}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <motion.div 
+              variants={avatarVariants}
+              className={cn('w-7 h-7 rounded-full flex items-center justify-center', color)}
+            >
+              <Icon className="w-4 h-4 text-foreground" />
+            </motion.div>
+            
+            <motion.span 
+              variants={labelVariants}
+              className="text-xs font-medium text-foreground"
+            >
+              {label}
+            </motion.span>
+            
+            <motion.span 
+              variants={labelVariants}
+              className="text-xs text-muted-foreground ml-auto"
+            >
+              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </motion.span>
+          </div>
+          
+          <div className="pl-9">
+            {/* Selectable content - highlight to comment */}
+            <motion.p 
+              variants={contentVariants}
+              className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text select-text"
+              onMouseUp={() => handleTextSelection(message.id)}
+            >
+              {shouldType ? (
+                <TypingText 
+                  text={message.content} 
+                  speed={12}
+                  onComplete={() => handleMessageTypingComplete(message.id)}
+                />
+              ) : (
+                message.content
+              )}
+            </motion.p>
+            
+            {/* Nested Assumptions - only show after typing completes */}
+            {hasAssumptions && (!isAgentMessage || isRevealed) && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="mt-4"
+              >
+                <button
+                  onClick={() => toggleAssumptions(message.id)}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                  <span className="font-medium">Assumptions ({message.assumptions!.length})</span>
+                </button>
+                
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="bg-muted/50 rounded-md p-3 border border-border/50 overflow-hidden"
+                    >
+                      <ul className="space-y-2">
+                        {message.assumptions!.map((assumption, idx) => (
+                          <motion.li 
+                            key={idx}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="text-xs text-muted-foreground flex items-start gap-2"
+                          >
+                            <span className="text-primary/60 mt-0.5">•</span>
+                            <span>{assumption}</span>
+                          </motion.li>
+                        ))}
+                      </ul>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+            
+            {/* Badges - show after typing for agent messages */}
+            {message.type === 'reasoning' && (!isAgentMessage || isRevealed) && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-3 flex items-center gap-1"
+              >
+                <span className="text-[10px] text-primary/70 bg-primary/10 px-2 py-1 rounded">
+                  REASONING
+                </span>
+              </motion.div>
+            )}
+            {message.type === 'action' && (!isAgentMessage || isRevealed) && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-3 flex items-center gap-1"
+              >
+                <span className="text-[10px] text-warning bg-warning/10 px-2 py-1 rounded">
+                  ACTION
+                </span>
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -398,195 +609,109 @@ export function ContextThread({ messages, taskTitle, taskStatus }: ContextThread
         ref={scrollRef}
         className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4 space-y-3"
       >
-        {/* Thinking Steps - Show during processing */}
-        {isProcessingTask && taskStatus && (
-          <ThinkingSteps currentStatus={taskStatus} />
-        )}
-        {/* Generating indicator */}
+        {/* Stage 1: Requestor Messages */}
         <AnimatePresence>
-          {isGenerating && visibleMessageIndex === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center gap-2 px-4 py-3 text-muted-foreground"
-            >
-              <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              <span className="text-xs">Analyzing context...</span>
-            </motion.div>
+          {requestorMessages.map((message, index) => (
+            renderMessage(
+              message, 
+              index, 
+              index === requestorMessages.length - 1, 
+              flowStage === 'requestor' && index === requestorMessages.length - 1 && threadComments.length === 0
+            )
+          ))}
+        </AnimatePresence>
+
+        {/* Stage 2: Thinking Steps - Show during thinking phase */}
+        <AnimatePresence>
+          {flowStage === 'thinking' && taskStatus && (
+            <ThinkingSteps 
+              currentStatus={taskStatus} 
+              onComplete={handleThinkingComplete}
+            />
           )}
         </AnimatePresence>
 
-        {messages.slice(0, visibleMessageIndex).map((message, index) => {
-          const { icon: Icon, color, label } = senderConfig[message.sender];
-          const isLastVisible = index === visibleMessageIndex - 1;
-          const isLastMessage = isLastVisible && !isGenerating && threadComments.length === 0;
-          const hasAssumptions = message.assumptions && message.assumptions.length > 0;
-          const isExpanded = expandedAssumptions[message.id] ?? true;
-          const isRevealed = revealedMessages.has(message.id);
-          const shouldType = isLastVisible && !isRevealed;
-          
-          return (
-            <div 
-              key={message.id} 
-              id={`message-${message.id}`}
-              className="relative"
-              ref={isLastMessage ? lastMessageRef : undefined}
-            >
-              <motion.div
-                variants={messageVariants}
-                initial="hidden"
-                animate="visible"
-                className={cn(
-                  'rounded-lg p-4 relative z-10',
-                  typeStyles[message.type]
-                )}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <motion.div 
-                    variants={avatarVariants}
-                    className={cn('w-7 h-7 rounded-full flex items-center justify-center', color)}
-                  >
-                    <Icon className="w-4 h-4 text-foreground" />
-                  </motion.div>
-                  
-                  <motion.span 
-                    variants={labelVariants}
-                    className="text-xs font-medium text-foreground"
-                  >
-                    {label}
-                  </motion.span>
-                  
-                  <motion.span 
-                    variants={labelVariants}
-                    className="text-xs text-muted-foreground ml-auto"
-                  >
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </motion.span>
-                </div>
+        {/* Stage 3: Agent Result Messages */}
+        <AnimatePresence>
+          {flowStage === 'result' || flowStage === 'artifacts' ? (
+            <>
+              {agentMessages.slice(0, visibleMessageIndex).map((message, index) => {
+                const isLastVisible = index === visibleMessageIndex - 1;
+                const isLastMessage = isLastVisible && flowStage !== 'artifacts' && threadComments.length === 0;
+                const isRevealed = revealedMessages.has(message.id);
                 
-                <div className="pl-9">
-                  {/* Selectable content - highlight to comment */}
-                  <motion.p 
-                    variants={contentVariants}
-                    className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text select-text"
-                    onMouseUp={() => handleTextSelection(message.id)}
-                  >
-                    {shouldType ? (
-                      <TypingText 
-                        text={message.content} 
-                        speed={12}
-                        onComplete={() => handleMessageTypingComplete(message.id)}
-                      />
-                    ) : (
-                      message.content
-                    )}
-                  </motion.p>
-                  
-                  {/* Nested Assumptions - only show after typing completes */}
-                  {hasAssumptions && isRevealed && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="mt-4"
-                    >
-                      <button
-                        onClick={() => toggleAssumptions(message.id)}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
+                return (
+                  <div key={message.id}>
+                    {renderMessage(message, index, isLastVisible, isLastMessage, true)}
+                    
+                    {/* Show loading indicator between messages */}
+                    {isLastVisible && flowStage === 'result' && visibleMessageIndex < agentMessages.length && isRevealed && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex items-center gap-2 px-4 py-2 mt-2"
                       >
-                        {isExpanded ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )}
-                        <span className="font-medium">Assumptions ({message.assumptions!.length})</span>
-                      </button>
-                      
-                      <AnimatePresence>
-                        {isExpanded && (
+                        <div className="flex gap-1">
                           <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="bg-muted/50 rounded-md p-3 border border-border/50 overflow-hidden"
-                          >
-                            <ul className="space-y-2">
-                              {message.assumptions!.map((assumption, idx) => (
-                                <motion.li 
-                                  key={idx}
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ delay: idx * 0.1 }}
-                                  className="text-xs text-muted-foreground flex items-start gap-2"
-                                >
-                                  <span className="text-primary/60 mt-0.5">•</span>
-                                  <span>{assumption}</span>
-                                </motion.li>
-                              ))}
-                            </ul>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  )}
-                  
-                  {/* Badges - show after typing */}
-                  {message.type === 'reasoning' && isRevealed && (
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="mt-3 flex items-center gap-1"
-                    >
-                      <span className="text-[10px] text-primary/70 bg-primary/10 px-2 py-1 rounded">
-                        REASONING
-                      </span>
-                    </motion.div>
-                  )}
-                  {message.type === 'action' && isRevealed && (
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="mt-3 flex items-center gap-1"
-                    >
-                      <span className="text-[10px] text-warning bg-warning/10 px-2 py-1 rounded">
-                        ACTION
-                      </span>
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                            className="w-1.5 h-1.5 rounded-full bg-primary/60"
+                          />
+                          <motion.div
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+                            className="w-1.5 h-1.5 rounded-full bg-primary/60"
+                          />
+                          <motion.div
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+                            className="w-1.5 h-1.5 rounded-full bg-primary/60"
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground">Processing...</span>
+                      </motion.div>
+                    )}
+                  </div>
+                );
+              })}
               
-              {/* Show loading indicator between messages */}
-              {isLastVisible && isGenerating && visibleMessageIndex < messages.length && isRevealed && (
+              {/* Generating first message indicator */}
+              {flowStage === 'result' && visibleMessageIndex === 0 && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center gap-2 px-4 py-2 mt-2"
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 px-4 py-3 text-muted-foreground"
                 >
-                  <div className="flex gap-1">
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                      className="w-1.5 h-1.5 rounded-full bg-primary/60"
-                    />
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                      className="w-1.5 h-1.5 rounded-full bg-primary/60"
-                    />
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                      className="w-1.5 h-1.5 rounded-full bg-primary/60"
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground">Processing...</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span className="text-xs">Generating response...</span>
                 </motion.div>
               )}
-            </div>
-          );
-        })}
+            </>
+          ) : null}
+        </AnimatePresence>
+
+        {/* Stage 4: Artifacts Loading Indicator */}
+        <AnimatePresence>
+          {flowStage === 'artifacts' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="p-3 bg-primary/5 rounded-lg border border-primary/20"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Package className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-foreground">Artifacts Ready</div>
+                  <div className="text-[10px] text-muted-foreground">Review the generated code and results →</div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Thread Comments - appear as reply messages, clickable to scroll to source */}
         <AnimatePresence>
@@ -703,7 +828,12 @@ export function ContextThread({ messages, taskTitle, taskStatus }: ContextThread
       <div className="px-4 py-3 border-t border-border">
         <div className="flex items-center gap-2 px-3 py-2.5 bg-muted/50 rounded-lg text-muted-foreground text-xs">
           <Bot className="w-4 h-4" />
-          <span>Agent awaiting review...</span>
+          <span>
+            {flowStage === 'requestor' && 'Reading request...'}
+            {flowStage === 'thinking' && 'Agent is thinking...'}
+            {flowStage === 'result' && 'Generating response...'}
+            {flowStage === 'artifacts' && 'Agent awaiting review...'}
+          </span>
         </div>
       </div>
     </div>
