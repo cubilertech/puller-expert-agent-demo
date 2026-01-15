@@ -1,8 +1,57 @@
 import { motion, Variants, AnimatePresence } from 'framer-motion';
-import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X } from 'lucide-react';
+import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2 } from 'lucide-react';
 import { ChatMessage } from '@/types';
 import { cn } from '@/lib/utils';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+
+// Typing effect component
+function TypingText({ text, delay = 0, speed = 15, onComplete }: { 
+  text: string; 
+  delay?: number; 
+  speed?: number;
+  onComplete?: () => void;
+}) {
+  const [displayedText, setDisplayedText] = useState('');
+  const [isComplete, setIsComplete] = useState(false);
+  
+  useEffect(() => {
+    setDisplayedText('');
+    setIsComplete(false);
+    
+    const startTimeout = setTimeout(() => {
+      let currentIndex = 0;
+      const interval = setInterval(() => {
+        if (currentIndex < text.length) {
+          // Type multiple characters at once for faster feel
+          const charsToAdd = Math.min(3, text.length - currentIndex);
+          setDisplayedText(text.slice(0, currentIndex + charsToAdd));
+          currentIndex += charsToAdd;
+        } else {
+          clearInterval(interval);
+          setIsComplete(true);
+          onComplete?.();
+        }
+      }, speed);
+      
+      return () => clearInterval(interval);
+    }, delay);
+    
+    return () => clearTimeout(startTimeout);
+  }, [text, delay, speed, onComplete]);
+  
+  return (
+    <span>
+      {displayedText}
+      {!isComplete && (
+        <motion.span
+          animate={{ opacity: [1, 0] }}
+          transition={{ duration: 0.5, repeat: Infinity }}
+          className="inline-block w-0.5 h-4 bg-primary ml-0.5 align-middle"
+        />
+      )}
+    </span>
+  );
+}
 
 interface ThreadComment {
   id: string;
@@ -101,6 +150,12 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [expandedAssumptions, setExpandedAssumptions] = useState<Record<string, boolean>>({});
   
+  // Track which messages have been "revealed" for typing effect
+  const [revealedMessages, setRevealedMessages] = useState<Set<string>>(new Set());
+  const [visibleMessageIndex, setVisibleMessageIndex] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(true);
+  const previousTaskTitle = useRef(taskTitle);
+  
   // Comment state
   const [threadComments, setThreadComments] = useState<ThreadComment[]>([]);
   const [selectedText, setSelectedText] = useState<{ text: string; messageId: string } | null>(null);
@@ -108,6 +163,42 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
   const [showCommentPopover, setShowCommentPopover] = useState(false);
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const commentInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset animation state when task changes
+  useEffect(() => {
+    if (previousTaskTitle.current !== taskTitle) {
+      setRevealedMessages(new Set());
+      setVisibleMessageIndex(0);
+      setIsGenerating(true);
+      setExpandedAssumptions({});
+      setThreadComments([]);
+      previousTaskTitle.current = taskTitle;
+    }
+  }, [taskTitle]);
+
+  // Progressively reveal messages one by one
+  useEffect(() => {
+    if (visibleMessageIndex >= messages.length) {
+      setIsGenerating(false);
+      return;
+    }
+    
+    // Calculate delay based on previous message content length
+    const prevMessage = messages[visibleMessageIndex - 1];
+    const baseDelay = visibleMessageIndex === 0 ? 300 : 800;
+    const contentDelay = prevMessage ? Math.min(prevMessage.content.length * 5, 1500) : 0;
+    
+    const timer = setTimeout(() => {
+      setVisibleMessageIndex(prev => prev + 1);
+    }, baseDelay + contentDelay);
+    
+    return () => clearTimeout(timer);
+  }, [visibleMessageIndex, messages]);
+
+  // Mark message as revealed when typing completes
+  const handleMessageTypingComplete = useCallback((messageId: string) => {
+    setRevealedMessages(prev => new Set([...prev, messageId]));
+  }, []);
 
   const toggleAssumptions = (messageId: string) => {
     setExpandedAssumptions(prev => ({
@@ -193,16 +284,29 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
         ref={scrollRef}
         className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4 space-y-3"
       >
-        {messages.map((message, index) => {
+        {/* Generating indicator */}
+        <AnimatePresence>
+          {isGenerating && visibleMessageIndex === 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-2 px-4 py-3 text-muted-foreground"
+            >
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              <span className="text-xs">Analyzing context...</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {messages.slice(0, visibleMessageIndex).map((message, index) => {
           const { icon: Icon, color, label } = senderConfig[message.sender];
-          const isLastMessage = index === messages.length - 1 && threadComments.length === 0;
+          const isLastVisible = index === visibleMessageIndex - 1;
+          const isLastMessage = isLastVisible && !isGenerating && threadComments.length === 0;
           const hasAssumptions = message.assumptions && message.assumptions.length > 0;
           const isExpanded = expandedAssumptions[message.id] ?? true;
-          
-          // Adaptive timing
-          const cumulativeDelay = index < 3 
-            ? index * 0.2 
-            : (3 * 0.2) + (index - 3) * 0.12;
+          const isRevealed = revealedMessages.has(message.id);
+          const shouldType = isLastVisible && !isRevealed;
           
           return (
             <div 
@@ -215,8 +319,7 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                 variants={messageVariants}
                 initial="hidden"
                 animate="visible"
-                transition={{ delay: cumulativeDelay }}
-              className={cn(
+                className={cn(
                   'rounded-lg p-4 relative z-10',
                   typeStyles[message.type]
                 )}
@@ -251,13 +354,23 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                     className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text select-text"
                     onMouseUp={() => handleTextSelection(message.id)}
                   >
-                    {message.content}
+                    {shouldType ? (
+                      <TypingText 
+                        text={message.content} 
+                        speed={12}
+                        onComplete={() => handleMessageTypingComplete(message.id)}
+                      />
+                    ) : (
+                      message.content
+                    )}
                   </motion.p>
                   
-                  {/* Nested Assumptions */}
-                  {hasAssumptions && (
+                  {/* Nested Assumptions - only show after typing completes */}
+                  {hasAssumptions && isRevealed && (
                     <motion.div 
-                      variants={badgeVariants}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
                       className="mt-4"
                     >
                       <button
@@ -272,33 +385,39 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                         <span className="font-medium">Assumptions ({message.assumptions!.length})</span>
                       </button>
                       
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="bg-muted/50 rounded-md p-3 border border-border/50"
-                        >
-                          <ul className="space-y-2">
-                            {message.assumptions!.map((assumption, idx) => (
-                              <li 
-                                key={idx}
-                                className="text-xs text-muted-foreground flex items-start gap-2"
-                              >
-                                <span className="text-primary/60 mt-0.5">•</span>
-                                <span>{assumption}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </motion.div>
-                      )}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="bg-muted/50 rounded-md p-3 border border-border/50 overflow-hidden"
+                          >
+                            <ul className="space-y-2">
+                              {message.assumptions!.map((assumption, idx) => (
+                                <motion.li 
+                                  key={idx}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: idx * 0.1 }}
+                                  className="text-xs text-muted-foreground flex items-start gap-2"
+                                >
+                                  <span className="text-primary/60 mt-0.5">•</span>
+                                  <span>{assumption}</span>
+                                </motion.li>
+                              ))}
+                            </ul>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   )}
                   
-                  {/* Badges */}
-                  {message.type === 'reasoning' && (
+                  {/* Badges - show after typing */}
+                  {message.type === 'reasoning' && isRevealed && (
                     <motion.div 
-                      variants={badgeVariants}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
                       className="mt-3 flex items-center gap-1"
                     >
                       <span className="text-[10px] text-primary/70 bg-primary/10 px-2 py-1 rounded">
@@ -306,9 +425,10 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                       </span>
                     </motion.div>
                   )}
-                  {message.type === 'action' && (
+                  {message.type === 'action' && isRevealed && (
                     <motion.div 
-                      variants={badgeVariants}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
                       className="mt-3 flex items-center gap-1"
                     >
                       <span className="text-[10px] text-warning bg-warning/10 px-2 py-1 rounded">
@@ -318,6 +438,34 @@ export function ContextThread({ messages, taskTitle }: ContextThreadProps) {
                   )}
                 </div>
               </motion.div>
+              
+              {/* Show loading indicator between messages */}
+              {isLastVisible && isGenerating && visibleMessageIndex < messages.length && isRevealed && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-2 px-4 py-2 mt-2"
+                >
+                  <div className="flex gap-1">
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                      className="w-1.5 h-1.5 rounded-full bg-primary/60"
+                    />
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+                      className="w-1.5 h-1.5 rounded-full bg-primary/60"
+                    />
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+                      className="w-1.5 h-1.5 rounded-full bg-primary/60"
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground">Processing...</span>
+                </motion.div>
+              )}
             </div>
           );
         })}
