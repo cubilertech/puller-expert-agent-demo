@@ -702,25 +702,101 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
           </div>
           
           <div className="pl-9">
-            {/* Selectable content - highlight to comment */}
-            <motion.p 
-              variants={contentVariants}
-              className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text select-text"
-              onMouseUp={() => handleTextSelection(message.id)}
+            {/* Assumptions at TOP - show first for agent messages */}
+            {hasAssumptions && isAgentMessage && (
+              <motion.div 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="mb-3"
+              >
+                <button
+                  onClick={() => toggleAssumptions(message.id)}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                  <span className="font-medium">Assumptions ({message.assumptions!.length})</span>
+                </button>
+                
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="bg-accent/30 rounded-md p-3 border border-primary/20 overflow-hidden"
+                    >
+                      <ul className="space-y-2">
+                        {message.assumptions!.map((assumption, idx) => {
+                          const shouldTypeAssumption = !revealedMessages.has(`${message.id}-assumption-${idx}`);
+                          return (
+                            <motion.li 
+                              key={idx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: idx * 0.15 }}
+                              className="text-xs text-muted-foreground flex items-start gap-2"
+                            >
+                              <motion.span 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: idx * 0.15 + 0.1 }}
+                                className="text-primary/60 mt-0.5 flex-shrink-0"
+                              >
+                                •
+                              </motion.span>
+                              <span className="flex-1">
+                                {shouldTypeAssumption && isLastVisible ? (
+                                  <TypingText 
+                                    text={assumption} 
+                                    speed={18}
+                                    delay={idx * 350 + 100}
+                                    onComplete={() => handleMessageTypingComplete(`${message.id}-assumption-${idx}`)}
+                                  />
+                                ) : (
+                                  assumption
+                                )}
+                              </span>
+                            </motion.li>
+                          );
+                        })}
+                      </ul>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            )}
+
+            {/* Result description with typing effect */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: hasAssumptions && isAgentMessage ? 0.8 : 0 }}
             >
-              {shouldType ? (
-                <TypingText 
-                  text={message.content} 
-                  speed={12}
-                  onComplete={() => handleMessageTypingComplete(message.id)}
-                />
-              ) : (
-                message.content
-              )}
-            </motion.p>
+              <motion.p 
+                variants={contentVariants}
+                className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text select-text"
+                onMouseUp={() => handleTextSelection(message.id)}
+              >
+                {shouldType ? (
+                  <TypingText 
+                    text={message.content} 
+                    speed={12}
+                    delay={hasAssumptions ? message.assumptions!.length * 400 + 300 : 0}
+                    onComplete={() => handleMessageTypingComplete(message.id)}
+                  />
+                ) : (
+                  message.content
+                )}
+              </motion.p>
+            </motion.div>
             
-            {/* Nested Assumptions - only show after typing completes */}
-            {hasAssumptions && (!isAgentMessage || isRevealed) && (
+            {/* Assumptions for non-agent messages (requestor) */}
+            {hasAssumptions && !isAgentMessage && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -748,39 +824,25 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
                       className="bg-muted/50 rounded-md p-3 border border-border/50 overflow-hidden"
                     >
                       <ul className="space-y-2">
-                        {message.assumptions!.map((assumption, idx) => {
-                          const shouldTypeAssumption = isAgentMessage && !revealedMessages.has(`${message.id}-assumption-${idx}`);
-                          return (
-                            <motion.li 
-                              key={idx}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.15 }}
-                              className="text-xs text-muted-foreground flex items-start gap-2"
+                        {message.assumptions!.map((assumption, idx) => (
+                          <motion.li 
+                            key={idx}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.15 }}
+                            className="text-xs text-muted-foreground flex items-start gap-2"
+                          >
+                            <motion.span 
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: idx * 0.15 + 0.1 }}
+                              className="text-primary/60 mt-0.5 flex-shrink-0"
                             >
-                              <motion.span 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: idx * 0.15 + 0.1 }}
-                                className="text-primary/60 mt-0.5 flex-shrink-0"
-                              >
-                                •
-                              </motion.span>
-                              <span className="flex-1">
-                                {shouldTypeAssumption ? (
-                                  <TypingText 
-                                    text={assumption} 
-                                    speed={18}
-                                    delay={idx * 350 + 100}
-                                    onComplete={() => handleMessageTypingComplete(`${message.id}-assumption-${idx}`)}
-                                  />
-                                ) : (
-                                  assumption
-                                )}
-                              </span>
-                            </motion.li>
-                          );
-                        })}
+                              •
+                            </motion.span>
+                            <span className="flex-1">{assumption}</span>
+                          </motion.li>
+                        ))}
                       </ul>
                     </motion.div>
                   )}
@@ -854,9 +916,50 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
           />
         )}
 
-        {/* Stage 3: Agent Result Messages */}
+        {/* Stage 3: Result Processing Animation */}
         <AnimatePresence>
-          {flowStage === 'result' || flowStage === 'artifacts' ? (
+          {flowStage === 'result' && visibleMessageIndex === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              className="p-4 bg-secondary/20 rounded-lg border border-border/40"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center"
+                >
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </motion.div>
+                <div className="flex-1">
+                  <div className="text-xs font-medium text-foreground">Preparing Results</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    <TypingText 
+                      text="Compiling analysis and generating response..." 
+                      speed={25}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Processing progress bar */}
+              <motion.div className="h-1 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  className="h-full bg-primary rounded-full"
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Stage 4: Agent Result Messages */}
+        <AnimatePresence>
+          {(flowStage === 'result' || flowStage === 'artifacts') && visibleMessageIndex > 0 ? (
             <>
               {agentMessages.slice(0, visibleMessageIndex).map((message, index) => {
                 const isLastVisible = index === visibleMessageIndex - 1;
@@ -897,19 +1000,6 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
                   </div>
                 );
               })}
-              
-              {/* Generating first message indicator */}
-              {flowStage === 'result' && visibleMessageIndex === 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2 px-4 py-3 text-muted-foreground"
-                >
-                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  <span className="text-xs">Generating response...</span>
-                </motion.div>
-              )}
             </>
           ) : null}
         </AnimatePresence>
