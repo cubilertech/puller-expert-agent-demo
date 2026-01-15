@@ -748,18 +748,39 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
                       className="bg-muted/50 rounded-md p-3 border border-border/50 overflow-hidden"
                     >
                       <ul className="space-y-2">
-                        {message.assumptions!.map((assumption, idx) => (
-                          <motion.li 
-                            key={idx}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            className="text-xs text-muted-foreground flex items-start gap-2"
-                          >
-                            <span className="text-primary/60 mt-0.5">•</span>
-                            <span>{assumption}</span>
-                          </motion.li>
-                        ))}
+                        {message.assumptions!.map((assumption, idx) => {
+                          const shouldTypeAssumption = isAgentMessage && !revealedMessages.has(`${message.id}-assumption-${idx}`);
+                          return (
+                            <motion.li 
+                              key={idx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: idx * 0.15 }}
+                              className="text-xs text-muted-foreground flex items-start gap-2"
+                            >
+                              <motion.span 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: idx * 0.15 + 0.1 }}
+                                className="text-primary/60 mt-0.5 flex-shrink-0"
+                              >
+                                •
+                              </motion.span>
+                              <span className="flex-1">
+                                {shouldTypeAssumption ? (
+                                  <TypingText 
+                                    text={assumption} 
+                                    speed={18}
+                                    delay={idx * 350 + 100}
+                                    onComplete={() => handleMessageTypingComplete(`${message.id}-assumption-${idx}`)}
+                                  />
+                                ) : (
+                                  assumption
+                                )}
+                              </span>
+                            </motion.li>
+                          );
+                        })}
                       </ul>
                     </motion.div>
                   )}
