@@ -64,7 +64,7 @@ function TypingText({ text, delay = 0, speed = 15, onComplete }: {
 // Flow stages for the context thread
 type FlowStage = 'requestor' | 'thinking' | 'result' | 'artifacts';
 
-// Thinking out loud component with completion callback
+// Thinking out loud component synced with task status
 function ThinkingSteps({ 
   currentStatus, 
   onComplete 
@@ -72,41 +72,50 @@ function ThinkingSteps({
   currentStatus: TaskStatus;
   onComplete?: () => void;
 }) {
-  const stageIndex = processingStages.findIndex(s => s.status === currentStatus);
-  const isProcessing = stageIndex >= 0;
+  // Get the current stage index based on the actual task status
+  const currentStageIndex = processingStages.findIndex(s => s.status === currentStatus);
+  const isProcessing = currentStageIndex >= 0;
   const [completedStages, setCompletedStages] = useState<Set<TaskStatus>>(new Set());
-  const [currentStageIndex, setCurrentStageIndex] = useState(0);
+  const previousStatus = useRef<TaskStatus | null>(null);
+  const hasCompleted = useRef(false);
   
-  // Animate through stages
+  // Sync completed stages with actual task status
   useEffect(() => {
-    // Reset when status changes
-    setCompletedStages(new Set());
-    setCurrentStageIndex(0);
-    
-    // Animate through each stage
-    const timers: NodeJS.Timeout[] = [];
-    
-    processingStages.forEach((stage, idx) => {
-      // Mark each stage as complete after a delay
-      const completeTimer = setTimeout(() => {
-        setCompletedStages(prev => new Set([...prev, stage.status]));
-        setCurrentStageIndex(idx + 1);
-        
-        // If this is the last stage, call onComplete
-        if (idx === processingStages.length - 1) {
-          setTimeout(() => {
-            onComplete?.();
-          }, 500);
-        }
-      }, (idx + 1) * 800); // Each stage takes 800ms
+    if (!isProcessing) {
+      // Task has moved past processing stages (e.g., to 'review')
+      // Mark all stages as complete
+      const allStages = new Set(processingStages.map(s => s.status));
+      setCompletedStages(allStages);
       
-      timers.push(completeTimer);
-    });
+      if (!hasCompleted.current) {
+        hasCompleted.current = true;
+        setTimeout(() => {
+          onComplete?.();
+        }, 300);
+      }
+      return;
+    }
     
-    return () => timers.forEach(t => clearTimeout(t));
-  }, [currentStatus, onComplete]);
+    // Mark all stages before the current one as complete
+    const newCompleted = new Set<TaskStatus>();
+    processingStages.forEach((stage, idx) => {
+      if (idx < currentStageIndex) {
+        newCompleted.add(stage.status);
+      }
+    });
+    setCompletedStages(newCompleted);
+    
+    previousStatus.current = currentStatus;
+  }, [currentStatus, currentStageIndex, isProcessing, onComplete]);
   
-  if (!isProcessing && currentStageIndex === 0) return null;
+  // Reset completion tracking when status resets
+  useEffect(() => {
+    if (currentStageIndex === 0) {
+      hasCompleted.current = false;
+    }
+  }, [currentStageIndex]);
+  
+  if (!isProcessing && completedStages.size === 0) return null;
   
   return (
     <motion.div
@@ -118,6 +127,21 @@ function ThinkingSteps({
       <div className="flex items-center gap-2 mb-3">
         <Brain className="w-4 h-4 text-primary animate-pulse" />
         <span className="text-xs font-medium text-foreground">Agent Thinking</span>
+      </div>
+      
+      {/* Progress bar synced with task card */}
+      <div className="flex items-center gap-1 mb-3">
+        {processingStages.map((stage, idx) => (
+          <div
+            key={stage.status}
+            className={cn(
+              'flex-1 h-1 rounded-full transition-colors duration-300',
+              idx < currentStageIndex ? 'bg-primary' : 
+              idx === currentStageIndex ? 'bg-primary animate-pulse' : 
+              'bg-muted'
+            )}
+          />
+        ))}
       </div>
       
       <div className="space-y-2">
