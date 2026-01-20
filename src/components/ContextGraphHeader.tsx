@@ -43,9 +43,12 @@ export function ContextGraphHeader({
       setIsOpen(true);
       setShowDottedFlow(true);
       
-      // Show dotted flow animation for 2.5 seconds
+      // Show dotted flow animation for 2.5 seconds, then close popover
       const dottedTimer = setTimeout(() => {
         setShowDottedFlow(false);
+        // Auto-close the popover once update completes (only if auto-opened)
+        setIsOpen(false);
+        setIsAutoOpened(false);
       }, 2500);
       
       // Keep add animation longer
