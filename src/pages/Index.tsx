@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { TaskFeed } from '@/components/TaskFeed';
 import { ContextThread } from '@/components/ContextThread';
 import { ArtifactEditor } from '@/components/ArtifactEditor';
-import { ContextGraph } from '@/components/ContextGraph';
+import { ContextGraphWidget } from '@/components/ContextGraphWidget';
 import { FlyingArtifact } from '@/components/FlyingArtifact';
 import { LearningToast } from '@/components/LearningToast';
 import { ControlTowerHeader } from '@/components/ControlTowerHeader';
@@ -306,16 +306,14 @@ export default function Index() {
             </div>
           )}
         </main>
-
-        {/* Right Sidebar - Context Graph */}
-        <aside className="w-64 border-l border-border flex-shrink-0 p-3">
-          <ContextGraph
-            nodes={knowledgeNodes}
-            isLearning={isLearning}
-            newNodeLabel={learningSignal?.rule}
-          />
-        </aside>
       </div>
+
+      {/* Floating Context Graph Widget */}
+      <ContextGraphWidget
+        nodes={knowledgeNodes}
+        isLearning={isLearning}
+        newNodeLabel={learningSignal?.rule}
+      />
 
       {/* Flying Artifact Animation */}
       <FlyingArtifact
