@@ -444,6 +444,7 @@ interface ContextThreadProps {
   taskSource?: 'email' | 'slack' | 'meeting';
   requestor?: string;
   onArtifactsReady?: () => void;
+  onCommentAdded?: (comment: { quotedText: string; comment: string }) => void;
 }
 
 const senderConfig = {
@@ -525,7 +526,7 @@ const badgeVariants: Variants = {
 };
 
 
-export function ContextThread({ messages, taskTitle, taskStatus, taskSource, requestor, onArtifactsReady }: ContextThreadProps) {
+export function ContextThread({ messages, taskTitle, taskStatus, taskSource, requestor, onArtifactsReady, onCommentAdded }: ContextThreadProps) {
   const isProcessingTask = taskStatus && ['ingesting', 'planning', 'reasoning', 'validating'].includes(taskStatus);
   
   // Parse requestor name and title
@@ -661,11 +662,15 @@ export function ContextThread({ messages, taskTitle, taskStatus, taskSource, req
     };
     
     setThreadComments(prev => [...prev, newComment]);
+    
+    // Notify parent about the comment for learning/context graph update
+    onCommentAdded?.({ quotedText: selectedText.text, comment: commentInput.trim() });
+    
     setCommentInput('');
     setSelectedText(null);
     setShowCommentPopover(false);
     window.getSelection()?.removeAllRanges();
-  }, [selectedText, commentInput]);
+  }, [selectedText, commentInput, onCommentAdded]);
 
   // Cancel comment
   const handleCancelComment = useCallback(() => {
