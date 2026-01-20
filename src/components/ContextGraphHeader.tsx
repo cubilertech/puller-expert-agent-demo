@@ -304,25 +304,27 @@ export function ContextGraphHeader({
           )}
         </AnimatePresence>
 
-        {/* Context Graph Canvas */}
-        <motion.div 
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 288 }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="overflow-hidden"
-        >
-          <ContextGraphCanvas
-            nodes={nodes}
-            isLearning={isLearning}
-            newNodeLabel={newNodeLabel}
-            onExpand={() => {
-              setIsOpen(false);
-              setIsModalOpen(true);
-            }}
-            compact
-          />
-        </motion.div>
+        {/* Context Graph Canvas - only show on manual open, not during auto-updates */}
+        {!isAutoOpened && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 288 }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="overflow-hidden"
+          >
+            <ContextGraphCanvas
+              nodes={nodes}
+              isLearning={isLearning}
+              newNodeLabel={newNodeLabel}
+              onExpand={() => {
+                setIsOpen(false);
+                setIsModalOpen(true);
+              }}
+              compact
+            />
+          </motion.div>
+        )}
       </PopoverContent>
 
       {/* Expanded Modal */}
