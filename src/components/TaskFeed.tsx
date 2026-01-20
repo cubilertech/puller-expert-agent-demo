@@ -19,11 +19,15 @@ import {
   Send,
   Eye,
   MessageCircle,
-  Inbox
+  Inbox,
+  Archive,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { Task, TaskStatus, TaskSource, SentStatus, CONFIDENCE_THRESHOLD } from '@/types';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface TaskFeedProps {
   tasks: Task[];
@@ -272,15 +276,27 @@ function TaskItem({ task, index, isSelected, onSelect, onForceComplete }: TaskIt
   );
 }
 
+// Archived task placeholders
+const archivedTasks = [
+  { id: 'archived-1', title: 'Q3 Revenue Analysis', requestor: 'Finance Team', daysAgo: 3 },
+  { id: 'archived-2', title: 'Customer Churn Report', requestor: 'Sarah Chen', daysAgo: 5 },
+  { id: 'archived-3', title: 'Inventory Restock Alert', requestor: 'Ops Team', daysAgo: 7 },
+  { id: 'archived-4', title: 'Marketing Campaign ROI', requestor: 'Mike Johnson', daysAgo: 8 },
+  { id: 'archived-5', title: 'Weekly Sales Summary', requestor: 'Sales Ops', daysAgo: 10 },
+];
+
+const ARCHIVED_BASE_COUNT = 142;
+
 export function TaskFeed({ tasks, selectedTaskId, onSelectTask, onForceComplete }: TaskFeedProps) {
   const [activeTab, setActiveTab] = useState<TabType>('active');
+  const [archivedOpen, setArchivedOpen] = useState(false);
   
   const activeCount = tasks.filter(t => ['ingesting', 'planning', 'reasoning', 'validating', 'review'].includes(t.status)).length;
   const sentCount = tasks.filter(t => t.status === 'sent').length;
   const doneCount = tasks.filter(t => ['approved', 'learning'].includes(t.status)).length;
   
   // Show 100s for done count in display
-  const displayDoneCount = doneCount + 142; // Add base count to show activity
+  const displayDoneCount = doneCount + ARCHIVED_BASE_COUNT;
 
   const filteredTasks = filterTasksByTab(tasks, activeTab);
 
@@ -319,7 +335,7 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask, onForceComplete 
         {/* Task List - shared across all tabs */}
         <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
           <AnimatePresence mode="popLayout">
-            {filteredTasks.length === 0 ? (
+            {filteredTasks.length === 0 && activeTab !== 'done' ? (
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -341,6 +357,42 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask, onForceComplete 
               ))
             )}
           </AnimatePresence>
+          
+          {/* Archived Section - Only in Done tab */}
+          {activeTab === 'done' && (
+            <Collapsible open={archivedOpen} onOpenChange={setArchivedOpen} className="mt-4">
+              <CollapsibleTrigger className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                {archivedOpen ? (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                )}
+                <Archive className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">Archived</span>
+                <span className="ml-auto text-[10px] bg-muted/50 text-muted-foreground px-1.5 py-0.5 rounded-full">
+                  {ARCHIVED_BASE_COUNT}
+                </span>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-1.5">
+                {archivedTasks.map((archived) => (
+                  <div
+                    key={archived.id}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/20 border-l-2 border-l-muted"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground/50" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground truncate">{archived.title}</p>
+                      <p className="text-[10px] text-muted-foreground/60">{archived.requestor}</p>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground/50">{archived.daysAgo}d ago</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-center py-2 text-[10px] text-muted-foreground/50">
+                  + {ARCHIVED_BASE_COUNT - archivedTasks.length} more archived tasks
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
       </Tabs>
     </div>
