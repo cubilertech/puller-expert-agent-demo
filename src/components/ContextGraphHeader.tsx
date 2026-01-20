@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, ChevronDown, Sparkles } from 'lucide-react';
+import { Brain, ChevronDown, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ContextGraphCanvas } from './ContextGraphCanvas';
 import { ContextGraphModal } from './ContextGraphModal';
@@ -25,6 +25,8 @@ export function ContextGraphHeader({
   const [isOpen, setIsOpen] = useState(false);
   const [showAddAnimation, setShowAddAnimation] = useState(false);
   const [prevNodeCount, setPrevNodeCount] = useState(nodes.length);
+  const [showDottedFlow, setShowDottedFlow] = useState(false);
+  const [isAutoOpened, setIsAutoOpened] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const nodesByType = {
@@ -33,24 +35,45 @@ export function ContextGraphHeader({
     fact: nodes.filter(n => n.type === 'fact').length,
   };
 
-  // Detect when new nodes are added - just animate the button, don't auto-open
+  // Detect when new nodes are added and auto-open popover briefly
   useEffect(() => {
     if (nodes.length > prevNodeCount) {
       setShowAddAnimation(true);
+      setIsAutoOpened(true);
+      setIsOpen(true);
+      setShowDottedFlow(true);
       
-      // Keep add animation for the button glow effect
+      // Show dotted flow animation for 2.5 seconds, then close popover
+      const dottedTimer = setTimeout(() => {
+        setShowDottedFlow(false);
+      }, 2500);
+      
+      // Auto-close the popover after update animation completes
+      const closeTimer = setTimeout(() => {
+        setIsOpen(false);
+        setIsAutoOpened(false);
+      }, 2800);
+      
+      // Keep add animation longer for the button glow
       const animTimer = setTimeout(() => setShowAddAnimation(false), 4000);
       
       return () => {
+        clearTimeout(dottedTimer);
+        clearTimeout(closeTimer);
         clearTimeout(animTimer);
       };
     }
     setPrevNodeCount(nodes.length);
   }, [nodes.length, prevNodeCount]);
 
-  // Handle manual open/close
+  // Handle manual open/close - if user manually opens, keep it open
   const handleOpenChange = (open: boolean) => {
+    // If user is manually closing or opening, respect that
     setIsOpen(open);
+    if (open) {
+      // User manually opened, clear auto-opened state so it won't auto-close
+      setIsAutoOpened(false);
+    }
   };
 
   return (
@@ -188,6 +211,99 @@ export function ContextGraphHeader({
         align="end"
         sideOffset={8}
       >
+        {/* Learning Signal Banner with Dotted Flow Animation */}
+        <AnimatePresence>
+          {learningSignal && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 25, duration: 0.5 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-success/10 border-b border-success/20 p-4 relative">
+                <div className="flex items-center gap-2 mb-3">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  </motion.div>
+                  <span className="text-xs font-semibold text-success">
+                    Updating Context Graph
+                  </span>
+                </div>
+                
+                <motion.div 
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.3, duration: 0.4 }}
+                  className="bg-background/50 rounded-md p-3 font-mono text-xs relative"
+                >
+                  <span className="text-primary">{learningSignal.rule}</span>
+                  <span className="text-muted-foreground"> = </span>
+                  <span className="text-success">{learningSignal.value}</span>
+                  
+                  {/* Dotted flow animation line */}
+                  <AnimatePresence>
+                    {showDottedFlow && (
+                      <motion.div 
+                        className="absolute -right-4 top-1/2 -translate-y-1/2 flex items-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        {/* Animated dots flowing to header */}
+                        <div className="flex items-center gap-1">
+                          {[0, 1, 2, 3, 4].map((i) => (
+                            <motion.div
+                              key={i}
+                              className="w-1 h-1 rounded-full bg-success"
+                              initial={{ opacity: 0, x: 0 }}
+                              animate={{ 
+                                opacity: [0, 1, 1, 0],
+                                x: [0, 20, 40, 60],
+                                y: [0, -5, -10, -15]
+                              }}
+                              transition={{
+                                duration: 1.5,
+                                delay: i * 0.15,
+                                repeat: Infinity,
+                                ease: 'easeOut'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+                
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-[10px] text-muted-foreground mt-3 flex items-center gap-2"
+                >
+                  <span>Adding to context graph...</span>
+                  {showDottedFlow && (
+                    <motion.span 
+                      className="flex items-center gap-0.5"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    >
+                      <span className="w-1 h-1 rounded-full bg-success/60" />
+                      <span className="w-1 h-1 rounded-full bg-success/60" />
+                      <span className="w-1 h-1 rounded-full bg-success/60" />
+                    </motion.span>
+                  )}
+                </motion.p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Context Graph Canvas */}
         <motion.div 
           initial={{ opacity: 0, height: 0 }}
