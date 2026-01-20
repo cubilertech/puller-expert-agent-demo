@@ -912,7 +912,7 @@ export function ArtifactEditor({
                   ) : (
                     <>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-mono text-muted-foreground">Result Preview (5 rows)</span>
+                        <span className="text-xs font-mono text-muted-foreground">Result Preview ({tableData.length} rows)</span>
                         {getCommentsForSection('table').length > 0 && (
                           <span className="text-[10px] text-warning bg-warning/10 px-1.5 py-0.5 rounded-full flex items-center gap-1">
                             <MessageSquare className="w-2.5 h-2.5" />
