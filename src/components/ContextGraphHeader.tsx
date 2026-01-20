@@ -35,7 +35,7 @@ export function ContextGraphHeader({
     fact: nodes.filter(n => n.type === 'fact').length,
   };
 
-  // Detect when new nodes are added and auto-open popover with longer delay
+  // Detect when new nodes are added and auto-open popover briefly
   useEffect(() => {
     if (nodes.length > prevNodeCount) {
       setShowAddAnimation(true);
@@ -46,38 +46,32 @@ export function ContextGraphHeader({
       // Show dotted flow animation for 2.5 seconds, then close popover
       const dottedTimer = setTimeout(() => {
         setShowDottedFlow(false);
-        // Auto-close the popover once update completes (only if auto-opened)
-        setIsOpen(false);
-        setIsAutoOpened(false);
       }, 2500);
       
-      // Keep add animation longer
+      // Auto-close the popover after update animation completes
+      const closeTimer = setTimeout(() => {
+        setIsOpen(false);
+        setIsAutoOpened(false);
+      }, 2800);
+      
+      // Keep add animation longer for the button glow
       const animTimer = setTimeout(() => setShowAddAnimation(false), 4000);
       
       return () => {
         clearTimeout(dottedTimer);
+        clearTimeout(closeTimer);
         clearTimeout(animTimer);
       };
     }
     setPrevNodeCount(nodes.length);
   }, [nodes.length, prevNodeCount]);
 
-  // Auto-close popover after learning signal dismisses with longer delay
-  useEffect(() => {
-    if (!learningSignal && isOpen && isAutoOpened) {
-      const timer = setTimeout(() => {
-        setIsOpen(false);
-        setIsAutoOpened(false);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [learningSignal, isOpen, isAutoOpened]);
-
-  // Handle manual open/close - reset auto-opened state when manually interacted
+  // Handle manual open/close - if user manually opens, keep it open
   const handleOpenChange = (open: boolean) => {
+    // If user is manually closing or opening, respect that
     setIsOpen(open);
     if (open) {
-      // User manually opened, so don't hide the graph
+      // User manually opened, clear auto-opened state so it won't auto-close
       setIsAutoOpened(false);
     }
   };
