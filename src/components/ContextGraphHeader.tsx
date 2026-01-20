@@ -79,171 +79,135 @@ export function ContextGraphHeader({
     }
   };
 
-  // Hide widget completely during auto-triggered processing
-  const isProcessing = isAutoOpened && showDottedFlow;
-
   return (
     <Popover open={isOpen} onOpenChange={handleOpenChange}>
-      <AnimatePresence mode="wait">
-        {!isProcessing ? (
-          <PopoverTrigger asChild>
-            <motion.button
-              key="widget"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className={cn(
-                'flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all relative overflow-hidden',
-                isLearning || showAddAnimation
-                  ? 'bg-success/10 border-success/30 hover:bg-success/20'
-                  : 'bg-muted/30 border-border hover:bg-muted/50',
-                isOpen && 'ring-2 ring-success/30'
-              )}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {/* Background pulse animation when learning */}
-              <AnimatePresence>
-                {(isLearning || showAddAnimation) && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0.5 }}
-                    animate={{ scale: 2, opacity: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                    className="absolute inset-0 bg-success rounded-lg"
-                  />
-                )}
-              </AnimatePresence>
-
-              {/* Icon */}
+      <PopoverTrigger asChild>
+        <motion.button
+          className={cn(
+            'flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all relative overflow-hidden',
+            isLearning || showAddAnimation
+              ? 'bg-success/10 border-success/30 hover:bg-success/20'
+              : 'bg-muted/30 border-border hover:bg-muted/50',
+            isOpen && 'ring-2 ring-success/30'
+          )}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          {/* Background pulse animation when learning */}
+          <AnimatePresence>
+            {(isLearning || showAddAnimation) && (
               <motion.div
-                animate={isLearning ? { rotate: 360 } : {}}
-                transition={{ repeat: isLearning ? Infinity : 0, duration: 2, ease: 'linear' }}
-              >
-                <Brain className={cn(
-                  'w-3.5 h-3.5 relative z-10',
-                  isLearning || showAddAnimation ? 'text-success' : 'text-muted-foreground'
-                )} />
-              </motion.div>
+                initial={{ scale: 0, opacity: 0.5 }}
+                animate={{ scale: 2, opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="absolute inset-0 bg-success rounded-lg"
+              />
+            )}
+          </AnimatePresence>
 
-              {/* Count with animation */}
-              <div className="flex items-center gap-1.5 relative z-10">
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={nodes.length}
-                    initial={{ y: -10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 10, opacity: 0 }}
-                    className={cn(
-                      'text-xs font-semibold',
-                      isLearning || showAddAnimation ? 'text-success' : 'text-foreground'
-                    )}
-                  >
-                    {nodes.length}
-                  </motion.span>
-                </AnimatePresence>
-                <span className={cn(
-                  'text-xs',
-                  isLearning || showAddAnimation ? 'text-success/80' : 'text-muted-foreground'
-                )}>
-                  learned
-                </span>
-              </div>
-
-              {/* Mini inline visualization - colored dots */}
-              <div className="flex items-center gap-0.5 ml-1 relative z-10">
-                {/* Entity dots */}
-                {Array.from({ length: Math.min(nodesByType.entity, 3) }).map((_, i) => (
-                  <motion.div
-                    key={`entity-${i}`}
-                    className="w-1.5 h-1.5 rounded-full bg-primary"
-                    initial={showAddAnimation && i === nodesByType.entity - 1 ? { scale: 0 } : { scale: 1 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                  />
-                ))}
-                {nodesByType.entity > 3 && (
-                  <span className="text-[9px] text-primary ml-0.5">+{nodesByType.entity - 3}</span>
-                )}
-                
-                {/* Rule dots */}
-                {Array.from({ length: Math.min(nodesByType.rule, 3) }).map((_, i) => (
-                  <motion.div
-                    key={`rule-${i}`}
-                    className="w-1.5 h-1.5 rounded-full bg-warning"
-                    initial={showAddAnimation && i === nodesByType.rule - 1 ? { scale: 0 } : { scale: 1 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 15, delay: 0.05 }}
-                  />
-                ))}
-                {nodesByType.rule > 3 && (
-                  <span className="text-[9px] text-warning ml-0.5">+{nodesByType.rule - 3}</span>
-                )}
-                
-                {/* Fact dots */}
-                {Array.from({ length: Math.min(nodesByType.fact, 3) }).map((_, i) => (
-                  <motion.div
-                    key={`fact-${i}`}
-                    className="w-1.5 h-1.5 rounded-full bg-success"
-                    initial={showAddAnimation && i === nodesByType.fact - 1 ? { scale: 0 } : { scale: 1 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 15, delay: 0.1 }}
-                  />
-                ))}
-                {nodesByType.fact > 3 && (
-                  <span className="text-[9px] text-success ml-0.5">+{nodesByType.fact - 3}</span>
-                )}
-              </div>
-
-              {/* Expand indicator */}
-              <ChevronDown className={cn(
-                'w-3 h-3 transition-transform relative z-10',
-                isLearning || showAddAnimation ? 'text-success/60' : 'text-muted-foreground',
-                isOpen && 'rotate-180'
-              )} />
-
-              {/* New knowledge sparkle */}
-              <AnimatePresence>
-                {showAddAnimation && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0 }}
-                    className="absolute -top-1 -right-1 z-20"
-                  >
-                    <Sparkles className="w-3 h-3 text-success" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.button>
-          </PopoverTrigger>
-        ) : (
+          {/* Icon */}
           <motion.div
-            key="processing"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border bg-success/10 border-success/30"
+            animate={isLearning ? { rotate: 360 } : {}}
+            transition={{ repeat: isLearning ? Infinity : 0, duration: 2, ease: 'linear' }}
           >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-            >
-              <Brain className="w-3.5 h-3.5 text-success" />
-            </motion.div>
-            <span className="text-xs font-medium text-success">Updating context...</span>
-            <motion.div 
-              className="flex items-center gap-0.5"
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1, repeat: Infinity }}
-            >
-              <span className="w-1 h-1 rounded-full bg-success" />
-              <span className="w-1 h-1 rounded-full bg-success" />
-              <span className="w-1 h-1 rounded-full bg-success" />
-            </motion.div>
+            <Brain className={cn(
+              'w-3.5 h-3.5 relative z-10',
+              isLearning || showAddAnimation ? 'text-success' : 'text-muted-foreground'
+            )} />
           </motion.div>
-        )}
-      </AnimatePresence>
+
+          {/* Count with animation */}
+          <div className="flex items-center gap-1.5 relative z-10">
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={nodes.length}
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 10, opacity: 0 }}
+                className={cn(
+                  'text-xs font-semibold',
+                  isLearning || showAddAnimation ? 'text-success' : 'text-foreground'
+                )}
+              >
+                {nodes.length}
+              </motion.span>
+            </AnimatePresence>
+            <span className={cn(
+              'text-xs',
+              isLearning || showAddAnimation ? 'text-success/80' : 'text-muted-foreground'
+            )}>
+              learned
+            </span>
+          </div>
+
+          {/* Mini inline visualization - colored dots */}
+          <div className="flex items-center gap-0.5 ml-1 relative z-10">
+            {/* Entity dots */}
+            {Array.from({ length: Math.min(nodesByType.entity, 3) }).map((_, i) => (
+              <motion.div
+                key={`entity-${i}`}
+                className="w-1.5 h-1.5 rounded-full bg-primary"
+                initial={showAddAnimation && i === nodesByType.entity - 1 ? { scale: 0 } : { scale: 1 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+              />
+            ))}
+            {nodesByType.entity > 3 && (
+              <span className="text-[9px] text-primary ml-0.5">+{nodesByType.entity - 3}</span>
+            )}
+            
+            {/* Rule dots */}
+            {Array.from({ length: Math.min(nodesByType.rule, 3) }).map((_, i) => (
+              <motion.div
+                key={`rule-${i}`}
+                className="w-1.5 h-1.5 rounded-full bg-warning"
+                initial={showAddAnimation && i === nodesByType.rule - 1 ? { scale: 0 } : { scale: 1 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 15, delay: 0.05 }}
+              />
+            ))}
+            {nodesByType.rule > 3 && (
+              <span className="text-[9px] text-warning ml-0.5">+{nodesByType.rule - 3}</span>
+            )}
+            
+            {/* Fact dots */}
+            {Array.from({ length: Math.min(nodesByType.fact, 3) }).map((_, i) => (
+              <motion.div
+                key={`fact-${i}`}
+                className="w-1.5 h-1.5 rounded-full bg-success"
+                initial={showAddAnimation && i === nodesByType.fact - 1 ? { scale: 0 } : { scale: 1 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 15, delay: 0.1 }}
+              />
+            ))}
+            {nodesByType.fact > 3 && (
+              <span className="text-[9px] text-success ml-0.5">+{nodesByType.fact - 3}</span>
+            )}
+          </div>
+
+          {/* Expand indicator */}
+          <ChevronDown className={cn(
+            'w-3 h-3 transition-transform relative z-10',
+            isLearning || showAddAnimation ? 'text-success/60' : 'text-muted-foreground',
+            isOpen && 'rotate-180'
+          )} />
+
+          {/* New knowledge sparkle */}
+          <AnimatePresence>
+            {showAddAnimation && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0 }}
+                className="absolute -top-1 -right-1 z-20"
+              >
+                <Sparkles className="w-3 h-3 text-success" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
+      </PopoverTrigger>
 
       <PopoverContent 
         className="w-96 p-0 overflow-hidden" 
