@@ -1,5 +1,5 @@
 import { motion, Variants, AnimatePresence } from 'framer-motion';
-import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2, Brain, Search, FileCheck, Sparkles, Package, AlertTriangle, Hammer, Gift } from 'lucide-react';
+import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2, Brain, Search, FileCheck, Sparkles, Package, AlertTriangle, Hammer, Gift, Mail, MessageCircle, Calendar } from 'lucide-react';
 import { ChatMessage, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -441,6 +441,8 @@ interface ContextThreadProps {
   messages: ChatMessage[];
   taskTitle: string;
   taskStatus?: TaskStatus;
+  taskSource?: 'email' | 'slack' | 'meeting';
+  requestor?: string;
   onArtifactsReady?: () => void;
 }
 
@@ -523,8 +525,20 @@ const badgeVariants: Variants = {
 };
 
 
-export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsReady }: ContextThreadProps) {
+export function ContextThread({ messages, taskTitle, taskStatus, taskSource, requestor, onArtifactsReady }: ContextThreadProps) {
   const isProcessingTask = taskStatus && ['ingesting', 'planning', 'reasoning', 'validating'].includes(taskStatus);
+  
+  // Parse requestor name and title
+  const requestorParts = requestor?.split(',').map(s => s.trim()) || [];
+  const requestorName = requestorParts[0] || 'Requestor';
+  const requestorTitle = requestorParts[1] || null;
+  
+  // Source icon config
+  const sourceConfig = {
+    email: { icon: Mail, label: 'via Email' },
+    slack: { icon: MessageCircle, label: 'via Slack' },
+    meeting: { icon: Calendar, label: 'from Meeting' }
+  };
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [expandedAssumptions, setExpandedAssumptions] = useState<Record<string, boolean>>({});
@@ -706,12 +720,22 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
               <Icon className="w-4 h-4 text-foreground" />
             </motion.div>
             
-            <motion.span 
-              variants={labelVariants}
-              className="text-xs font-medium text-foreground"
-            >
-              {label}
-            </motion.span>
+            <div className="flex flex-col">
+              <motion.span 
+                variants={labelVariants}
+                className="text-xs font-medium text-foreground"
+              >
+                {message.sender === 'user' ? requestorName : label}
+              </motion.span>
+              {message.sender === 'user' && requestorTitle && (
+                <motion.span 
+                  variants={labelVariants}
+                  className="text-[10px] text-muted-foreground"
+                >
+                  {requestorTitle}
+                </motion.span>
+              )}
+            </div>
             
             <motion.span 
               variants={labelVariants}
@@ -880,13 +904,37 @@ export function ContextThread({ messages, taskTitle, taskStatus, onArtifactsRead
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header */}
+      {/* Header with requestor context */}
       <div className="px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2 mb-1">
           <MessageSquare className="w-4 h-4 text-primary" />
           <h3 className="font-semibold text-sm text-foreground">Workflow Thread</h3>
         </div>
-        <p className="text-xs text-muted-foreground truncate">{taskTitle}</p>
+        <p className="text-xs text-muted-foreground truncate mb-2">{taskTitle}</p>
+        
+        {/* Requestor context bar */}
+        {requestor && (
+          <div className="flex items-center gap-2 text-[11px] bg-muted/30 rounded-md px-2.5 py-1.5">
+            <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+              <User className="w-3 h-3 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="font-medium text-foreground">{requestorName}</span>
+              {requestorTitle && (
+                <span className="text-muted-foreground"> · {requestorTitle}</span>
+              )}
+            </div>
+            {taskSource && sourceConfig[taskSource] && (
+              <span className="flex items-center gap-1 text-muted-foreground">
+                {(() => {
+                  const SourceIcon = sourceConfig[taskSource].icon;
+                  return <SourceIcon className="w-3 h-3" />;
+                })()}
+                <span className="hidden sm:inline">{sourceConfig[taskSource].label}</span>
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Messages */}

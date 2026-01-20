@@ -180,6 +180,8 @@ export default function Index() {
                   messages={taskData?.messages || chatMessages}
                   taskTitle={selectedTask.description}
                   taskStatus={selectedTask.status}
+                  taskSource={selectedTask.source}
+                  requestor={selectedTask.requestor}
                   onArtifactsReady={() => setArtifactsReady(true)}
                 />
               </div>
