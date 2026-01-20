@@ -91,7 +91,7 @@ export function ControlTowerHeader({
             className="flex items-center gap-2 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
-            <span className="text-xs">Refresh Demo</span>
+            <span className="text-xs">Refresh</span>
           </Button>
         )}
 
