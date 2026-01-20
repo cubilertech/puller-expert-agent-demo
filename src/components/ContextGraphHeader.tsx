@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ChevronDown, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ContextGraph } from './ContextGraph';
+import { ContextGraphCanvas } from './ContextGraphCanvas';
+import { ContextGraphModal } from './ContextGraphModal';
 import { KnowledgeNode, LearningSignal } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +27,7 @@ export function ContextGraphHeader({
   const [prevNodeCount, setPrevNodeCount] = useState(nodes.length);
   const [showDottedFlow, setShowDottedFlow] = useState(false);
   const [isAutoOpened, setIsAutoOpened] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const nodesByType = {
     entity: nodes.filter(n => n.type === 'entity').length,
@@ -305,7 +307,7 @@ export function ContextGraphHeader({
           )}
         </AnimatePresence>
 
-        {/* Context Graph - hide only during auto-opened updates */}
+        {/* Context Graph Canvas - hide only during auto-opened updates */}
         <AnimatePresence mode="wait">
           {!(isAutoOpened && showDottedFlow) ? (
             <motion.div 
@@ -316,10 +318,15 @@ export function ContextGraphHeader({
               transition={{ duration: 0.4, delay: 0.2 }}
               className="overflow-hidden"
             >
-              <ContextGraph
+              <ContextGraphCanvas
                 nodes={nodes}
                 isLearning={isLearning}
                 newNodeLabel={newNodeLabel}
+                onExpand={() => {
+                  setIsOpen(false);
+                  setIsModalOpen(true);
+                }}
+                compact
               />
             </motion.div>
           ) : (
@@ -342,6 +349,15 @@ export function ContextGraphHeader({
           )}
         </AnimatePresence>
       </PopoverContent>
+
+      {/* Expanded Modal */}
+      <ContextGraphModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        nodes={nodes}
+        isLearning={isLearning}
+        newNodeLabel={newNodeLabel}
+      />
     </Popover>
   );
 }
