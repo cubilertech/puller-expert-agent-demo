@@ -310,47 +310,25 @@ export function ContextGraphHeader({
           )}
         </AnimatePresence>
 
-        {/* Context Graph Canvas - hide only during auto-opened updates */}
-        <AnimatePresence mode="wait">
-          {!(isAutoOpened && showDottedFlow) ? (
-            <motion.div 
-              key="graph"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 288 }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              className="overflow-hidden"
-            >
-              <ContextGraphCanvas
-                nodes={nodes}
-                isLearning={isLearning}
-                newNodeLabel={newNodeLabel}
-                onExpand={() => {
-                  setIsOpen(false);
-                  setIsModalOpen(true);
-                }}
-                compact
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="updating-placeholder"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="h-16 flex items-center justify-center"
-            >
-              <motion.div 
-                className="flex items-center gap-2 text-xs text-muted-foreground"
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              >
-                <Brain className="w-4 h-4 text-success" />
-                <span>Processing knowledge...</span>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Context Graph Canvas */}
+        <motion.div 
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 288 }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="overflow-hidden"
+        >
+          <ContextGraphCanvas
+            nodes={nodes}
+            isLearning={isLearning}
+            newNodeLabel={newNodeLabel}
+            onExpand={() => {
+              setIsOpen(false);
+              setIsModalOpen(true);
+            }}
+            compact
+          />
+        </motion.div>
       </PopoverContent>
 
       {/* Expanded Modal */}
