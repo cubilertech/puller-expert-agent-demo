@@ -1,18 +1,26 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, ChevronDown, Sparkles } from 'lucide-react';
+import { Brain, ChevronDown, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ContextGraph } from './ContextGraph';
-import { KnowledgeNode } from '@/types';
+import { KnowledgeNode, LearningSignal } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface ContextGraphHeaderProps {
   nodes: KnowledgeNode[];
   isLearning: boolean;
   newNodeLabel?: string;
+  learningSignal?: LearningSignal | null;
+  onDismissSignal?: () => void;
 }
 
-export function ContextGraphHeader({ nodes, isLearning, newNodeLabel }: ContextGraphHeaderProps) {
+export function ContextGraphHeader({ 
+  nodes, 
+  isLearning, 
+  newNodeLabel,
+  learningSignal,
+  onDismissSignal 
+}: ContextGraphHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showAddAnimation, setShowAddAnimation] = useState(false);
   const [prevNodeCount, setPrevNodeCount] = useState(nodes.length);
@@ -23,15 +31,24 @@ export function ContextGraphHeader({ nodes, isLearning, newNodeLabel }: ContextG
     fact: nodes.filter(n => n.type === 'fact').length,
   };
 
-  // Detect when new nodes are added
+  // Detect when new nodes are added and auto-open popover
   useEffect(() => {
     if (nodes.length > prevNodeCount) {
       setShowAddAnimation(true);
+      setIsOpen(true); // Auto-open when learning
       const timer = setTimeout(() => setShowAddAnimation(false), 2000);
       return () => clearTimeout(timer);
     }
     setPrevNodeCount(nodes.length);
   }, [nodes.length, prevNodeCount]);
+
+  // Auto-close popover after learning signal dismisses
+  useEffect(() => {
+    if (!learningSignal && isOpen && showAddAnimation) {
+      const timer = setTimeout(() => setIsOpen(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [learningSignal, isOpen, showAddAnimation]);
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -65,7 +82,7 @@ export function ContextGraphHeader({ nodes, isLearning, newNodeLabel }: ContextG
             animate={isLearning ? { rotate: 360 } : {}}
             transition={{ repeat: isLearning ? Infinity : 0, duration: 2, ease: 'linear' }}
           >
-            <Zap className={cn(
+            <Brain className={cn(
               'w-3.5 h-3.5 relative z-10',
               isLearning || showAddAnimation ? 'text-success' : 'text-muted-foreground'
             )} />
@@ -164,15 +181,64 @@ export function ContextGraphHeader({ nodes, isLearning, newNodeLabel }: ContextG
       </PopoverTrigger>
 
       <PopoverContent 
-        className="w-96 h-80 p-0 overflow-hidden" 
+        className="w-96 p-0 overflow-hidden" 
         align="end"
         sideOffset={8}
       >
-        <ContextGraph
-          nodes={nodes}
-          isLearning={isLearning}
-          newNodeLabel={newNodeLabel}
-        />
+        {/* Learning Signal Banner */}
+        <AnimatePresence>
+          {learningSignal && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-success/10 border-b border-success/20 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 300 }}
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  </motion.div>
+                  <span className="text-xs font-semibold text-success">
+                    Knowledge Updated
+                  </span>
+                </div>
+                <motion.div 
+                  initial={{ x: -20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                  className="bg-background/50 rounded-md p-2 font-mono text-xs"
+                >
+                  <span className="text-primary">{learningSignal.rule}</span>
+                  <span className="text-muted-foreground"> = </span>
+                  <span className="text-success">{learningSignal.value}</span>
+                </motion.div>
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.25 }}
+                  className="text-[10px] text-muted-foreground mt-2"
+                >
+                  This rule will apply to all future queries.
+                </motion.p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Context Graph */}
+        <div className="h-72">
+          <ContextGraph
+            nodes={nodes}
+            isLearning={isLearning}
+            newNodeLabel={newNodeLabel}
+          />
+        </div>
       </PopoverContent>
     </Popover>
   );

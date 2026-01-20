@@ -3,15 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { TaskFeed } from '@/components/TaskFeed';
 import { ContextThread } from '@/components/ContextThread';
 import { ArtifactEditor } from '@/components/ArtifactEditor';
-// ContextGraph is now integrated into the header
 import { FlyingArtifact } from '@/components/FlyingArtifact';
-import { LearningToast } from '@/components/LearningToast';
 import { ControlTowerHeader } from '@/components/ControlTowerHeader';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useAuth } from '@/hooks/useAuth';
 import { Task, KnowledgeNode, LearningSignal } from '@/types';
 import { initialTasks, initialKnowledgeNodes, allTaskData, chatMessages, originalCode, originalCodeAnnotations } from '@/data/demoData';
-
 export default function Index() {
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -158,6 +155,8 @@ export default function Index() {
         onRefresh={handleRefreshDemo}
         knowledgeNodes={knowledgeNodes}
         newNodeLabel={learningSignal?.rule}
+        learningSignal={learningSignal}
+        onDismissSignal={handleDismissToast}
       />
 
       {/* Main Layout */}
@@ -318,8 +317,6 @@ export default function Index() {
         onComplete={handleFlyingComplete}
       />
 
-      {/* Learning Toast */}
-      <LearningToast signal={learningSignal} onDismiss={handleDismissToast} />
     </div>
   );
 }
