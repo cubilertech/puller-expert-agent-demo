@@ -306,6 +306,15 @@ export default function Index() {
             </div>
           )}
         </main>
+
+        {/* Right Sidebar - Context Graph */}
+        <aside className="w-64 border-l border-border flex-shrink-0 p-3">
+          <ContextGraph
+            nodes={knowledgeNodes}
+            isLearning={isLearning}
+            newNodeLabel={learningSignal?.rule}
+          />
+        </aside>
       </div>
 
       {/* Flying Artifact Animation */}
