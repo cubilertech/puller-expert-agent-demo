@@ -25,7 +25,7 @@ export function ContextGraphHeader({
   const [showAddAnimation, setShowAddAnimation] = useState(false);
   const [prevNodeCount, setPrevNodeCount] = useState(nodes.length);
   const [showDottedFlow, setShowDottedFlow] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isAutoOpened, setIsAutoOpened] = useState(false);
 
   const nodesByType = {
     entity: nodes.filter(n => n.type === 'entity').length,
@@ -37,14 +37,13 @@ export function ContextGraphHeader({
   useEffect(() => {
     if (nodes.length > prevNodeCount) {
       setShowAddAnimation(true);
-      setIsUpdating(true);
+      setIsAutoOpened(true);
       setIsOpen(true);
       setShowDottedFlow(true);
       
       // Show dotted flow animation for 2.5 seconds
       const dottedTimer = setTimeout(() => {
         setShowDottedFlow(false);
-        setIsUpdating(false);
       }, 2500);
       
       // Keep add animation longer
@@ -60,14 +59,26 @@ export function ContextGraphHeader({
 
   // Auto-close popover after learning signal dismisses with longer delay
   useEffect(() => {
-    if (!learningSignal && isOpen && !isUpdating) {
-      const timer = setTimeout(() => setIsOpen(false), 2000);
+    if (!learningSignal && isOpen && isAutoOpened) {
+      const timer = setTimeout(() => {
+        setIsOpen(false);
+        setIsAutoOpened(false);
+      }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [learningSignal, isOpen, isUpdating]);
+  }, [learningSignal, isOpen, isAutoOpened]);
+
+  // Handle manual open/close - reset auto-opened state when manually interacted
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open) {
+      // User manually opened, so don't hide the graph
+      setIsAutoOpened(false);
+    }
+  };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <motion.button
           className={cn(
@@ -294,9 +305,9 @@ export function ContextGraphHeader({
           )}
         </AnimatePresence>
 
-        {/* Context Graph - only show when not actively updating */}
+        {/* Context Graph - hide only during auto-opened updates */}
         <AnimatePresence mode="wait">
-          {!isUpdating ? (
+          {!(isAutoOpened && showDottedFlow) ? (
             <motion.div 
               key="graph"
               initial={{ opacity: 0, height: 0 }}
