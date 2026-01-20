@@ -183,6 +183,28 @@ export default function Index() {
                   taskSource={selectedTask.source}
                   requestor={selectedTask.requestor}
                   onArtifactsReady={() => setArtifactsReady(true)}
+                  onCommentAdded={(comment) => {
+                    // Add a new knowledge node from the comment
+                    const newNode: KnowledgeNode = {
+                      id: `node-${Date.now()}`,
+                      label: comment.quotedText.slice(0, 20) + (comment.quotedText.length > 20 ? '...' : ''),
+                      type: 'rule',
+                      x: 80 + Math.random() * 140,
+                      y: 280 + Math.random() * 60,
+                      isNew: true,
+                      connections: ['node-1'],
+                    };
+                    setKnowledgeNodes((prev) => [...prev, newNode]);
+                    setApprovedCount((prev) => prev + 1);
+                    
+                    // Show learning signal
+                    setLearningSignal({
+                      id: `signal-${Date.now()}`,
+                      rule: 'USER_CORRECTION',
+                      value: comment.comment.slice(0, 30),
+                      timestamp: new Date(),
+                    });
+                  }}
                 />
               </div>
               
