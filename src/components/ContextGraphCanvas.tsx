@@ -13,11 +13,32 @@ interface ContextGraphCanvasProps {
   compact?: boolean;
 }
 
-const nodeColors = {
-  entity: { fill: 'hsl(var(--primary))', glow: 'hsla(var(--primary), 0.5)' },
-  rule: { fill: 'hsl(var(--warning))', glow: 'hsla(var(--warning), 0.5)' },
-  fact: { fill: 'hsl(var(--success))', glow: 'hsla(var(--success), 0.5)' },
+// Helper to get computed CSS color as usable canvas color
+const getCSSColor = (varName: string, opacity?: number): string => {
+  const root = document.documentElement;
+  const value = getComputedStyle(root).getPropertyValue(varName).trim();
+  if (!value) return opacity !== undefined ? `rgba(128, 128, 128, ${opacity})` : '#888';
+  // Value is HSL components like "220 14% 10%"
+  if (opacity !== undefined) {
+    return `hsla(${value.replace(/\s+/g, ', ')}, ${opacity})`;
+  }
+  return `hsl(${value.replace(/\s+/g, ', ')})`;
 };
+
+const getNodeColors = () => ({
+  entity: { 
+    fill: getCSSColor('--primary'), 
+    glow: getCSSColor('--primary', 0.5) 
+  },
+  rule: { 
+    fill: getCSSColor('--warning'), 
+    glow: getCSSColor('--warning', 0.5) 
+  },
+  fact: { 
+    fill: getCSSColor('--success'), 
+    glow: getCSSColor('--success', 0.5) 
+  },
+});
 
 export function ContextGraphCanvas({ 
   nodes, 
@@ -63,6 +84,7 @@ export function ContextGraphCanvas({
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
+    const nodeColors = getNodeColors();
     const dpr = window.devicePixelRatio || 1;
     canvas.width = dimensions.width * dpr;
     canvas.height = dimensions.height * dpr;
@@ -78,13 +100,14 @@ export function ContextGraphCanvas({
     ctx.translate(-dimensions.width / 2, -dimensions.height / 2);
 
     // Draw connections
+    const successColor = getCSSColor('--success', 0.3 + Math.sin(pulseRef.current) * 0.2);
+    const mutedColor = getCSSColor('--muted-foreground', 0.2);
+    
     connections.forEach(conn => {
       ctx.beginPath();
       ctx.moveTo(conn.from.x, conn.from.y);
       ctx.lineTo(conn.to.x, conn.to.y);
-      ctx.strokeStyle = isLearning 
-        ? `hsla(var(--success), ${0.3 + Math.sin(pulseRef.current) * 0.2})`
-        : 'hsla(var(--muted-foreground), 0.2)';
+      ctx.strokeStyle = isLearning ? successColor : mutedColor;
       ctx.lineWidth = 1;
       ctx.stroke();
     });
@@ -119,7 +142,7 @@ export function ContextGraphCanvas({
 
       // Label
       ctx.font = '9px system-ui, sans-serif';
-      ctx.fillStyle = 'hsl(var(--foreground))';
+      ctx.fillStyle = getCSSColor('--foreground');
       ctx.globalAlpha = 0.7;
       ctx.textAlign = 'center';
       ctx.fillText(node.label, node.x, node.y + actualRadius + 12);
