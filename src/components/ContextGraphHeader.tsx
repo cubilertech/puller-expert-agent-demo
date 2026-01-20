@@ -24,6 +24,8 @@ export function ContextGraphHeader({
   const [isOpen, setIsOpen] = useState(false);
   const [showAddAnimation, setShowAddAnimation] = useState(false);
   const [prevNodeCount, setPrevNodeCount] = useState(nodes.length);
+  const [showDottedFlow, setShowDottedFlow] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const nodesByType = {
     entity: nodes.filter(n => n.type === 'entity').length,
@@ -31,24 +33,38 @@ export function ContextGraphHeader({
     fact: nodes.filter(n => n.type === 'fact').length,
   };
 
-  // Detect when new nodes are added and auto-open popover
+  // Detect when new nodes are added and auto-open popover with longer delay
   useEffect(() => {
     if (nodes.length > prevNodeCount) {
       setShowAddAnimation(true);
-      setIsOpen(true); // Auto-open when learning
-      const timer = setTimeout(() => setShowAddAnimation(false), 2000);
-      return () => clearTimeout(timer);
+      setIsUpdating(true);
+      setIsOpen(true);
+      setShowDottedFlow(true);
+      
+      // Show dotted flow animation for 2.5 seconds
+      const dottedTimer = setTimeout(() => {
+        setShowDottedFlow(false);
+        setIsUpdating(false);
+      }, 2500);
+      
+      // Keep add animation longer
+      const animTimer = setTimeout(() => setShowAddAnimation(false), 4000);
+      
+      return () => {
+        clearTimeout(dottedTimer);
+        clearTimeout(animTimer);
+      };
     }
     setPrevNodeCount(nodes.length);
   }, [nodes.length, prevNodeCount]);
 
-  // Auto-close popover after learning signal dismisses
+  // Auto-close popover after learning signal dismisses with longer delay
   useEffect(() => {
-    if (!learningSignal && isOpen && showAddAnimation) {
-      const timer = setTimeout(() => setIsOpen(false), 500);
+    if (!learningSignal && isOpen && !isUpdating) {
+      const timer = setTimeout(() => setIsOpen(false), 2000);
       return () => clearTimeout(timer);
     }
-  }, [learningSignal, isOpen, showAddAnimation]);
+  }, [learningSignal, isOpen, isUpdating]);
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -185,60 +201,135 @@ export function ContextGraphHeader({
         align="end"
         sideOffset={8}
       >
-        {/* Learning Signal Banner */}
+        {/* Learning Signal Banner with Dotted Flow Animation */}
         <AnimatePresence>
           {learningSignal && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 25, duration: 0.5 }}
               className="overflow-hidden"
             >
-              <div className="bg-success/10 border-b border-success/20 p-3">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="bg-success/10 border-b border-success/20 p-4 relative">
+                <div className="flex items-center gap-2 mb-3">
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    transition={{ delay: 0.1, type: 'spring', stiffness: 300 }}
+                    transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
                   >
                     <CheckCircle2 className="w-4 h-4 text-success" />
                   </motion.div>
                   <span className="text-xs font-semibold text-success">
-                    Knowledge Updated
+                    Updating Context Graph
                   </span>
                 </div>
+                
                 <motion.div 
                   initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.15 }}
-                  className="bg-background/50 rounded-md p-2 font-mono text-xs"
+                  transition={{ delay: 0.3, duration: 0.4 }}
+                  className="bg-background/50 rounded-md p-3 font-mono text-xs relative"
                 >
                   <span className="text-primary">{learningSignal.rule}</span>
                   <span className="text-muted-foreground"> = </span>
                   <span className="text-success">{learningSignal.value}</span>
+                  
+                  {/* Dotted flow animation line */}
+                  <AnimatePresence>
+                    {showDottedFlow && (
+                      <motion.div 
+                        className="absolute -right-4 top-1/2 -translate-y-1/2 flex items-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        {/* Animated dots flowing to header */}
+                        <div className="flex items-center gap-1">
+                          {[0, 1, 2, 3, 4].map((i) => (
+                            <motion.div
+                              key={i}
+                              className="w-1 h-1 rounded-full bg-success"
+                              initial={{ opacity: 0, x: 0 }}
+                              animate={{ 
+                                opacity: [0, 1, 1, 0],
+                                x: [0, 20, 40, 60],
+                                y: [0, -5, -10, -15]
+                              }}
+                              transition={{
+                                duration: 1.5,
+                                delay: i * 0.15,
+                                repeat: Infinity,
+                                ease: 'easeOut'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
+                
                 <motion.p 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.25 }}
-                  className="text-[10px] text-muted-foreground mt-2"
+                  transition={{ delay: 0.5 }}
+                  className="text-[10px] text-muted-foreground mt-3 flex items-center gap-2"
                 >
-                  This rule will apply to all future queries.
+                  <span>Adding to context graph...</span>
+                  {showDottedFlow && (
+                    <motion.span 
+                      className="flex items-center gap-0.5"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    >
+                      <span className="w-1 h-1 rounded-full bg-success/60" />
+                      <span className="w-1 h-1 rounded-full bg-success/60" />
+                      <span className="w-1 h-1 rounded-full bg-success/60" />
+                    </motion.span>
+                  )}
                 </motion.p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Context Graph */}
-        <div className="h-72">
-          <ContextGraph
-            nodes={nodes}
-            isLearning={isLearning}
-            newNodeLabel={newNodeLabel}
-          />
-        </div>
+        {/* Context Graph - only show when not actively updating */}
+        <AnimatePresence mode="wait">
+          {!isUpdating ? (
+            <motion.div 
+              key="graph"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 288 }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="overflow-hidden"
+            >
+              <ContextGraph
+                nodes={nodes}
+                isLearning={isLearning}
+                newNodeLabel={newNodeLabel}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="updating-placeholder"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="h-16 flex items-center justify-center"
+            >
+              <motion.div 
+                className="flex items-center gap-2 text-xs text-muted-foreground"
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <Brain className="w-4 h-4 text-success" />
+                <span>Processing knowledge...</span>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </PopoverContent>
     </Popover>
   );
