@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { TaskFeed } from '@/components/TaskFeed';
 import { ContextThread } from '@/components/ContextThread';
 import { ArtifactEditor } from '@/components/ArtifactEditor';
-import { ContextGraphWidget } from '@/components/ContextGraphWidget';
+// ContextGraph is now integrated into the header
 import { FlyingArtifact } from '@/components/FlyingArtifact';
 import { LearningToast } from '@/components/LearningToast';
 import { ControlTowerHeader } from '@/components/ControlTowerHeader';
@@ -156,6 +156,8 @@ export default function Index() {
         isLearning={isLearning}
         onLogout={logout}
         onRefresh={handleRefreshDemo}
+        knowledgeNodes={knowledgeNodes}
+        newNodeLabel={learningSignal?.rule}
       />
 
       {/* Main Layout */}
@@ -308,12 +310,7 @@ export default function Index() {
         </main>
       </div>
 
-      {/* Floating Context Graph Widget */}
-      <ContextGraphWidget
-        nodes={knowledgeNodes}
-        isLearning={isLearning}
-        newNodeLabel={learningSignal?.rule}
-      />
+      {/* Context Graph is now integrated into the header */}
 
       {/* Flying Artifact Animation */}
       <FlyingArtifact

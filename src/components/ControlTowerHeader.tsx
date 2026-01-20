@@ -1,7 +1,9 @@
-import { Activity, Shield, Zap, Database, LogOut, RefreshCw } from 'lucide-react';
+import { Activity, Shield, Database, LogOut, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ContextGraphHeader } from './ContextGraphHeader';
+import { KnowledgeNode } from '@/types';
 
 interface ControlTowerHeaderProps {
   taskCount: number;
@@ -9,15 +11,21 @@ interface ControlTowerHeaderProps {
   isLearning: boolean;
   onLogout?: () => void;
   onRefresh?: () => void;
+  knowledgeNodes?: KnowledgeNode[];
+  newNodeLabel?: string;
 }
+
 export function ControlTowerHeader({
   taskCount,
   approvedCount,
   isLearning,
   onLogout,
-  onRefresh
+  onRefresh,
+  knowledgeNodes = [],
+  newNodeLabel
 }: ControlTowerHeaderProps) {
-  return <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4">
+  return (
+    <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center">
@@ -50,37 +58,39 @@ export function ControlTowerHeader({
               <span className="text-foreground font-medium">{taskCount}</span> in queue
             </span>
           </div>
+          
+          {/* Context Graph Header Integration */}
+          <ContextGraphHeader
+            nodes={knowledgeNodes}
+            isLearning={isLearning}
+            newNodeLabel={newNodeLabel}
+          />
+
           <div className="flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-success" />
-            <span className="text-muted-foreground">
-              <span className="text-foreground font-medium">{approvedCount}</span> learned
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Database className={cn('w-3.5 h-3.5 transition-colors', isLearning ? 'text-success animate-pulse' : 'text-muted-foreground')} />
+            <Database className={cn(
+              'w-3.5 h-3.5 transition-colors',
+              isLearning ? 'text-success animate-pulse' : 'text-muted-foreground'
+            )} />
             <span className="text-muted-foreground">Context Graph</span>
           </div>
         </div>
 
         {/* Learning Indicator */}
-        {isLearning && <motion.div initial={{
-        opacity: 0,
-        scale: 0.9
-      }} animate={{
-        opacity: 1,
-        scale: 1
-      }} className="flex items-center gap-2 bg-success/10 border border-success/20 rounded-full px-3 py-1">
-            <motion.div animate={{
-          rotate: 360
-        }} transition={{
-          repeat: Infinity,
-          duration: 2,
-          ease: 'linear'
-        }}>
-              <Zap className="w-3 h-3 text-success" />
+        {isLearning && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-2 bg-success/10 border border-success/20 rounded-full px-3 py-1"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+            >
+              <Database className="w-3 h-3 text-success" />
             </motion.div>
             <span className="text-xs font-medium text-success">Learning</span>
-          </motion.div>}
+          </motion.div>
+        )}
 
         {/* Refresh Demo Button */}
         {onRefresh && (
@@ -108,5 +118,6 @@ export function ControlTowerHeader({
           </Button>
         )}
       </div>
-    </header>;
+    </header>
+  );
 }
