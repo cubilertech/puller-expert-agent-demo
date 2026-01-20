@@ -360,7 +360,7 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask, onForceComplete 
           
           {/* Archived Section - Only in Done tab */}
           {activeTab === 'done' && (
-            <Collapsible open={archivedOpen} onOpenChange={setArchivedOpen} className="mt-4">
+            <Collapsible open={archivedOpen} onOpenChange={setArchivedOpen}>
               <CollapsibleTrigger className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                 {archivedOpen ? (
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
