@@ -1,13 +1,27 @@
-import { Task, ChatMessage, CodeDiff, KnowledgeNode, SqlAnnotation, TaskData } from '@/types';
+import { Task, ChatMessage, CodeDiff, KnowledgeNode, SqlAnnotation, TaskData, CONFIDENCE_THRESHOLD, TaskStatus } from '@/types';
 import { allIndustryTasks, allTaskData, getTasksForDemo } from './demoConfig';
 
 // Re-export everything from demoConfig for backwards compatibility
 export { allIndustryTasks, allTaskData, getTasksForDemo } from './demoConfig';
 export type { SqlAnnotation } from '@/types';
 
+// Helper to correct status based on confidence threshold
+function correctTaskStatus(task: Task): Task {
+  // If task is marked as 'review' but has high confidence, move it to 'sent'
+  if (task.status === 'review' && (task.confidence ?? 0) >= CONFIDENCE_THRESHOLD) {
+    return {
+      ...task,
+      status: 'sent' as TaskStatus,
+      sentAt: new Date(Date.now() - 1000 * 60 * 2), // Sent 2 minutes ago
+      sentStatus: 'pending'
+    };
+  }
+  return task;
+}
+
 // Get initial tasks for the default demo mode (milk-run with 3 tasks plus some processing tasks)
 export const initialTasks: Task[] = (() => {
-  const demoTasks = getTasksForDemo('quick-demo');
+  const demoTasks = getTasksForDemo('quick-demo').map(correctTaskStatus);
   const demoTaskIds = new Set(demoTasks.map(t => t.id));
   
   // Add additional tasks that aren't already in the demo set
