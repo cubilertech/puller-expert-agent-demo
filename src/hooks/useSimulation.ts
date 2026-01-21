@@ -1,8 +1,6 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Task, TaskStatus, SentStatus, CONFIDENCE_THRESHOLD } from '@/types';
 import { ghostTaskTemplates } from '@/data/demoData';
-
-let taskCounter = 10;
 
 // Pipeline stages for automatic progression
 const processingStages: TaskStatus[] = ['ingesting', 'asserting', 'planning', 'building', 'validating', 'generating'];
@@ -14,6 +12,10 @@ export function useSimulation(
   enabled: boolean,
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>
 ) {
+  // Track used template indices to avoid immediate duplicates
+  const usedTemplateIndices = useRef<Set<number>>(new Set());
+  const taskCounterRef = useRef(Date.now());
+
   // Progress tasks through pipeline stages
   const progressTasks = useCallback(() => {
     setTasks((prev) =>
@@ -92,12 +94,29 @@ export function useSimulation(
   }, [setTasks]);
 
   const addGhostTask = useCallback(() => {
-    const template = ghostTaskTemplates[Math.floor(Math.random() * ghostTaskTemplates.length)];
+    // Find an unused template index
+    let availableIndices = ghostTaskTemplates
+      .map((_, idx) => idx)
+      .filter(idx => !usedTemplateIndices.current.has(idx));
+    
+    // If all templates used, reset the tracking
+    if (availableIndices.length === 0) {
+      usedTemplateIndices.current.clear();
+      availableIndices = ghostTaskTemplates.map((_, idx) => idx);
+    }
+    
+    const templateIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+    usedTemplateIndices.current.add(templateIndex);
+    
+    const template = ghostTaskTemplates[templateIndex];
     const sources = ['email', 'slack', 'meeting'] as const;
     const randomSource = template.source || sources[Math.floor(Math.random() * sources.length)];
     
+    // Use timestamp + counter for truly unique IDs
+    const uniqueId = `ghost-${Date.now()}-${taskCounterRef.current++}`;
+    
     const newTask: Task = {
-      id: `ghost-${taskCounter++}`,
+      id: uniqueId,
       title: template.title,
       requestor: template.requestor,
       status: 'ingesting', // Always start at ingesting
@@ -109,7 +128,16 @@ export function useSimulation(
       confidence: Math.floor(50 + Math.random() * 50),
     };
 
-    setTasks((prev) => [newTask, ...prev]);
+    // Only add if task with same title isn't already in processing stages
+    setTasks((prev) => {
+      const hasActiveWithSameTitle = prev.some(
+        t => t.title === newTask.title && processingStages.includes(t.status)
+      );
+      if (hasActiveWithSameTitle) {
+        return prev; // Skip adding duplicate
+      }
+      return [newTask, ...prev];
+    });
   }, [setTasks]);
 
   useEffect(() => {
