@@ -100,12 +100,15 @@ function getStageIndex(status: TaskStatus): number {
 // Tab definitions
 type TabType = 'active' | 'sent' | 'done';
 
+// All processing statuses that should appear in Incoming tab
+const incomingStatuses: TaskStatus[] = ['ingesting', 'asserting', 'planning', 'building', 'validating', 'generating', 'review'];
+
 function filterTasksByTab(tasks: Task[], tab: TabType): Task[] {
   switch (tab) {
     case 'active':
       // Combine incoming (processing) and review tasks
       return tasks
-        .filter(t => ['ingesting', 'planning', 'reasoning', 'validating', 'review'].includes(t.status))
+        .filter(t => incomingStatuses.includes(t.status))
         .sort((a, b) => {
           // Review tasks with high priority/urgency first
           if (a.status === 'review' && b.status !== 'review') return -1;
@@ -291,7 +294,7 @@ export function TaskFeed({ tasks, selectedTaskId, onSelectTask, onForceComplete 
   const [activeTab, setActiveTab] = useState<TabType>('active');
   const [archivedOpen, setArchivedOpen] = useState(false);
   
-  const activeCount = tasks.filter(t => ['ingesting', 'planning', 'reasoning', 'validating', 'review'].includes(t.status)).length;
+  const activeCount = tasks.filter(t => incomingStatuses.includes(t.status)).length;
   const sentCount = tasks.filter(t => t.status === 'sent').length;
   const doneCount = tasks.filter(t => ['approved', 'learning'].includes(t.status)).length;
   
