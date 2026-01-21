@@ -186,10 +186,37 @@ export default function Index() {
   }, []);
 
   const handleForceComplete = useCallback((taskId: string) => {
-    // Trigger the flying artifact animation and move to done
-    setSelectedTaskId(taskId);
-    setShowFlyingArtifact(true);
-  }, []);
+    // Move task to done and update context
+    setIsLearning(true);
+    
+    // Add new knowledge node for the completed task
+    const task = tasks.find(t => t.id === taskId);
+    const newNode: KnowledgeNode = {
+      id: `node-${Date.now()}`,
+      label: task?.title?.slice(0, 15) || 'Task Complete',
+      type: 'fact',
+      x: 80 + Math.random() * 140,
+      y: 280 + Math.random() * 60,
+      isNew: true,
+      connections: ['node-1'],
+    };
+    
+    setKnowledgeNodes((prev) => [...prev, newNode]);
+    
+    // Mark task as approved/done
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId ? { ...t, status: 'approved' as const } : t
+      )
+    );
+    
+    setApprovedCount((prev) => prev + 1);
+    
+    // End learning animation after delay
+    setTimeout(() => {
+      setIsLearning(false);
+    }, 2000);
+  }, [tasks]);
 
   const handleDismissToast = useCallback(() => {
     setLearningSignal(null);
