@@ -39,6 +39,32 @@ export default function Index() {
     }
   }, [selectedTaskId]);
 
+  // Auto-select next task when current task moves out of "incoming" queue
+  useEffect(() => {
+    if (!selectedTaskId) {
+      // No task selected, find the first incoming task to select
+      const incomingStatuses = ['ingesting', 'asserting', 'planning', 'building', 'validating', 'generating', 'review'];
+      const nextTask = tasks.find(t => incomingStatuses.includes(t.status));
+      if (nextTask) {
+        setSelectedTaskId(nextTask.id);
+      }
+      return;
+    }
+
+    const selectedTask = tasks.find(t => t.id === selectedTaskId);
+    if (!selectedTask) return;
+
+    // If current task moved to sent/approved/learning, auto-select next incoming task
+    const completedStatuses = ['sent', 'approved', 'learning'];
+    if (completedStatuses.includes(selectedTask.status)) {
+      const incomingStatuses = ['ingesting', 'asserting', 'planning', 'building', 'validating', 'generating', 'review'];
+      const nextTask = tasks.find(t => t.id !== selectedTaskId && incomingStatuses.includes(t.status));
+      if (nextTask) {
+        setSelectedTaskId(nextTask.id);
+      }
+    }
+  }, [tasks, selectedTaskId]);
+
   // Enable simulation for ghost tasks
   useSimulation(true, setTasks);
 
