@@ -10,7 +10,8 @@ const WAIT_PERIOD_MS = 30000; // 30 seconds for demo
 
 export function useSimulation(
   enabled: boolean,
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>,
+  onTaskAutoComplete?: (task: Task) => void
 ) {
   // Track used template indices to avoid immediate duplicates
   const usedTemplateIndices = useRef<Set<number>>(new Set());
@@ -57,8 +58,8 @@ export function useSimulation(
 
   // Simulate requestor feedback progression for sent tasks
   const simulateFeedback = useCallback(() => {
-    setTasks((prev) =>
-      prev.map((task) => {
+    setTasks((prev) => {
+      const updatedTasks = prev.map((task) => {
         if (task.status !== 'sent' || !task.sentAt) return task;
 
         const timeSinceSent = Date.now() - task.sentAt.getTime();
@@ -70,11 +71,16 @@ export function useSimulation(
 
         // After wait period, auto-advance to approved (no news is good news)
         if (timeSinceSent > WAIT_PERIOD_MS) {
-          return { 
+          const completedTask = { 
             ...task, 
             status: 'approved' as TaskStatus,
             requestorFeedback: 'positive' as const
           };
+          // Trigger callback for context graph update
+          if (onTaskAutoComplete) {
+            setTimeout(() => onTaskAutoComplete(completedTask), 0);
+          }
+          return completedTask;
         }
 
         // Small chance of negative feedback (returns to review)
@@ -89,9 +95,10 @@ export function useSimulation(
         }
 
         return task;
-      })
-    );
-  }, [setTasks]);
+      });
+      return updatedTasks;
+    });
+  }, [setTasks, onTaskAutoComplete]);
 
   const addGhostTask = useCallback(() => {
     // Find an unused template index
