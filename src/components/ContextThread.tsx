@@ -546,7 +546,8 @@ export function ContextThread({ messages, taskTitle, taskStatus, taskSource, req
   
   // Flow stage management
   const [flowStage, setFlowStage] = useState<FlowStage>('requestor');
-  const previousTaskTitle = useRef(taskTitle);
+  const previousTaskTitle = useRef<string | null>(null);
+  const hasInitialized = useRef(false);
   
   // Track which messages have been "revealed" for typing effect
   const [revealedMessages, setRevealedMessages] = useState<Set<string>>(new Set());
@@ -564,15 +565,19 @@ export function ContextThread({ messages, taskTitle, taskStatus, taskSource, req
   const requestorMessages = messages.filter(m => m.sender === 'user');
   const agentMessages = messages.filter(m => m.sender !== 'user');
 
-  // Reset animation state when task changes
+  // Reset animation state when task changes OR on initial mount
   useEffect(() => {
-    if (previousTaskTitle.current !== taskTitle) {
+    const isInitialMount = !hasInitialized.current;
+    const isTaskChange = previousTaskTitle.current !== taskTitle;
+    
+    if (isInitialMount || isTaskChange) {
       setFlowStage('requestor');
       setRevealedMessages(new Set());
       setVisibleMessageIndex(0);
       setExpandedAssumptions({});
       setThreadComments([]);
       previousTaskTitle.current = taskTitle;
+      hasInitialized.current = true;
       
       // Start the thinking phase after showing requestor message
       setTimeout(() => {
