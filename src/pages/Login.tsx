@@ -188,6 +188,8 @@ export default function Login() {
         }} className="w-56 h-20 flex items-center justify-center mx-auto mb-2">
             <img src={pullerLogo} alt="Puller AI" className="w-full object-contain " />
           </motion.div>
+          <h1 className="text-2xl font-bold text-foreground">Puller's Command Center</h1>
+          <p className="text-sm text-muted-foreground mt-1">Sign in to access the control centre</p>
         </div>
 
         {/* Login Form */}
@@ -261,7 +263,7 @@ export default function Login() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Protected access • Puller AI
+          Protected access • Puller AI Control Centre
         </p>
       </motion.div>
     </div>;
