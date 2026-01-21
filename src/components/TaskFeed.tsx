@@ -145,7 +145,7 @@ function TaskItem({ task, index, isSelected, onSelect, onForceComplete }: TaskIt
   const SourceIcon = sourceInfo.icon;
   const isReview = task.status === 'review';
   const isSent = task.status === 'sent';
-  const isProcessing = ['ingesting', 'planning', 'reasoning', 'validating'].includes(task.status);
+  const isProcessing = pipelineStages.includes(task.status);
   const currentStage = getStageIndex(task.status);
   const lowConfidence = (task.confidence ?? 50) < CONFIDENCE_THRESHOLD;
   const flags = task.flags || { urgency: false, humanRequested: false, vip: false };
