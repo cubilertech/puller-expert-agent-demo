@@ -98,5 +98,5 @@ export interface LearningSignal {
   timestamp: Date;
 }
 
-// Expert can adjust this
-export const CONFIDENCE_THRESHOLD = 75;
+// Expert can adjust this - tasks below this threshold go to expert review
+export const CONFIDENCE_THRESHOLD = 80;
