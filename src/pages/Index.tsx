@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { TaskFeed } from '@/components/TaskFeed';
 import { ContextThread } from '@/components/ContextThread';
 import { ArtifactEditor } from '@/components/ArtifactEditor';
@@ -200,111 +201,117 @@ export default function Index() {
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col overflow-hidden">
           {selectedTask ? (
-            <div className="flex-1 flex overflow-hidden">
+            <ResizablePanelGroup direction="horizontal" className="flex-1">
               {/* Context Thread */}
-              <div className="flex-1 overflow-hidden">
-                <ContextThread
-                  messages={taskData?.messages || chatMessages}
-                  taskTitle={selectedTask.description}
-                  taskStatus={selectedTask.status}
-                  taskSource={selectedTask.source}
-                  requestor={selectedTask.requestor}
-                  onArtifactsReady={() => setArtifactsReady(true)}
-                  onCommentAdded={(comment) => {
-                    // Add a new knowledge node from the comment
-                    const newNode: KnowledgeNode = {
-                      id: `node-${Date.now()}`,
-                      label: comment.quotedText.slice(0, 20) + (comment.quotedText.length > 20 ? '...' : ''),
-                      type: 'rule',
-                      x: 80 + Math.random() * 140,
-                      y: 280 + Math.random() * 60,
-                      isNew: true,
-                      connections: ['node-1'],
-                    };
-                    setKnowledgeNodes((prev) => [...prev, newNode]);
-                    setApprovedCount((prev) => prev + 1);
-                    
-                    // Show learning signal
-                    setLearningSignal({
-                      id: `signal-${Date.now()}`,
-                      rule: 'USER_CORRECTION',
-                      value: comment.comment.slice(0, 30),
-                      timestamp: new Date(),
-                    });
-                  }}
-                />
-              </div>
+              <ResizablePanel defaultSize={40} minSize={25} maxSize={60}>
+                <div className="h-full overflow-hidden">
+                  <ContextThread
+                    messages={taskData?.messages || chatMessages}
+                    taskTitle={selectedTask.description}
+                    taskStatus={selectedTask.status}
+                    taskSource={selectedTask.source}
+                    requestor={selectedTask.requestor}
+                    onArtifactsReady={() => setArtifactsReady(true)}
+                    onCommentAdded={(comment) => {
+                      // Add a new knowledge node from the comment
+                      const newNode: KnowledgeNode = {
+                        id: `node-${Date.now()}`,
+                        label: comment.quotedText.slice(0, 20) + (comment.quotedText.length > 20 ? '...' : ''),
+                        type: 'rule',
+                        x: 80 + Math.random() * 140,
+                        y: 280 + Math.random() * 60,
+                        isNew: true,
+                        connections: ['node-1'],
+                      };
+                      setKnowledgeNodes((prev) => [...prev, newNode]);
+                      setApprovedCount((prev) => prev + 1);
+                      
+                      // Show learning signal
+                      setLearningSignal({
+                        id: `signal-${Date.now()}`,
+                        rule: 'USER_CORRECTION',
+                        value: comment.comment.slice(0, 30),
+                        timestamp: new Date(),
+                      });
+                    }}
+                  />
+                </div>
+              </ResizablePanel>
+              
+              <ResizableHandle withHandle className="bg-border hover:bg-primary/20 transition-colors" />
               
               {/* Artifact Editor - Show loading state until artifacts are ready */}
-              <div className="w-[480px] border-l border-border flex-shrink-0">
-                {artifactsReady || selectedTask.status === 'sent' || selectedTask.status === 'approved' || selectedTask.status === 'review' ? (
-                  <ArtifactEditor
-                    code={taskData?.code || originalCode}
-                    annotations={taskData?.annotations || originalCodeAnnotations}
-                    tableColumns={taskData?.tableColumns}
-                    tableData={taskData?.tableData}
-                    initialAssumptions={taskData?.assumptions}
-                    initialMessage={taskData?.responseMessage}
-                    onApprove={handleSendToRequestor}
-                    onOverride={handleOverride}
-                    isApproving={isApproving}
-                    hideActions={selectedTask.status === 'sent' || selectedTask.status === 'approved'}
-                  />
-                ) : (
-                  <div className="h-full flex flex-col bg-background">
-                    {/* Header */}
-                    <div className="p-3 border-b border-border flex items-center gap-2 flex-shrink-0">
-                      <div className="w-4 h-4 rounded bg-muted animate-pulse" />
-                      <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+              <ResizablePanel defaultSize={60} minSize={40} maxSize={75}>
+                <div className="h-full border-l border-border">
+                  {artifactsReady || selectedTask.status === 'sent' || selectedTask.status === 'approved' || selectedTask.status === 'review' ? (
+                    <ArtifactEditor
+                      code={taskData?.code || originalCode}
+                      annotations={taskData?.annotations || originalCodeAnnotations}
+                      tableColumns={taskData?.tableColumns}
+                      tableData={taskData?.tableData}
+                      initialAssumptions={taskData?.assumptions}
+                      initialMessage={taskData?.responseMessage}
+                      onApprove={handleSendToRequestor}
+                      onOverride={handleOverride}
+                      isApproving={isApproving}
+                      hideActions={selectedTask.status === 'sent' || selectedTask.status === 'approved'}
+                    />
+                  ) : (
+                    <div className="h-full flex flex-col bg-background">
+                      {/* Header */}
+                      <div className="p-3 border-b border-border flex items-center gap-2 flex-shrink-0">
+                        <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+                      </div>
+                      
+                      {/* Loading skeleton */}
+                      <div className="flex-1 p-4 space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                            <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+                          </div>
+                          <div className="h-24 rounded bg-muted/50 animate-pulse" />
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                            <div className="h-4 w-28 rounded bg-muted animate-pulse" />
+                          </div>
+                          <div className="space-y-2">
+                            {[1, 2, 3].map(i => (
+                              <div key={i} className="flex items-center gap-2">
+                                <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                                <div className="h-3 flex-1 rounded bg-muted/60 animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded bg-muted animate-pulse" />
+                            <div className="h-4 w-20 rounded bg-muted animate-pulse" />
+                          </div>
+                          <div className="h-48 rounded bg-muted/40 animate-pulse" />
+                        </div>
+                        
+                        {/* Waiting text */}
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground mt-8">
+                          <div className="flex gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '0ms' }} />
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '200ms' }} />
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '400ms' }} />
+                          </div>
+                          <span className="text-xs">Waiting for agent response...</span>
+                        </div>
+                      </div>
                     </div>
-                    
-                    {/* Loading skeleton */}
-                    <div className="flex-1 p-4 space-y-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded bg-muted animate-pulse" />
-                          <div className="h-4 w-32 rounded bg-muted animate-pulse" />
-                        </div>
-                        <div className="h-24 rounded bg-muted/50 animate-pulse" />
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded bg-muted animate-pulse" />
-                          <div className="h-4 w-28 rounded bg-muted animate-pulse" />
-                        </div>
-                        <div className="space-y-2">
-                          {[1, 2, 3].map(i => (
-                            <div key={i} className="flex items-center gap-2">
-                              <div className="w-4 h-4 rounded bg-muted animate-pulse" />
-                              <div className="h-3 flex-1 rounded bg-muted/60 animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded bg-muted animate-pulse" />
-                          <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-                        </div>
-                        <div className="h-48 rounded bg-muted/40 animate-pulse" />
-                      </div>
-                      
-                      {/* Waiting text */}
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground mt-8">
-                        <div className="flex gap-1">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '0ms' }} />
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '200ms' }} />
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" style={{ animationDelay: '400ms' }} />
-                        </div>
-                        <span className="text-xs">Waiting for agent response...</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+                  )}
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
