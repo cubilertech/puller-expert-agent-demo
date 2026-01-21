@@ -253,13 +253,15 @@ function TaskItem({ task, index, isSelected, onSelect, onForceComplete }: TaskIt
           </span>
         )}
         
-        {/* Confidence Score */}
-        <span className={cn(
-          'ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded',
-          lowConfidence ? 'text-warning bg-warning/10' : 'text-success bg-success/10'
-        )}>
-          {task.confidence}% conf
-        </span>
+        {/* Confidence Score - only show when processing is complete */}
+        {!isProcessing && (
+          <span className={cn(
+            'ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded',
+            lowConfidence ? 'text-warning bg-warning/10' : 'text-success bg-success/10'
+          )}>
+            {task.confidence}% conf
+          </span>
+        )}
       </div>
 
       {/* Force Auto-Complete Button for Sent Tasks */}
