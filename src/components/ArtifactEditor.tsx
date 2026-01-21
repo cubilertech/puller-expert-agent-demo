@@ -114,7 +114,7 @@ export function ArtifactEditor({
   }, [initialAssumptions, initialMessage, code]);
   const [assumptionsExpanded, setAssumptionsExpanded] = useState(true);
   const [messageExpanded, setMessageExpanded] = useState(true);
-  const [queryExpanded, setQueryExpanded] = useState(false);
+  const [queryExpanded, setQueryExpanded] = useState(true);
   const [newAssumption, setNewAssumption] = useState('');
   const [isAddingAssumption, setIsAddingAssumption] = useState(false);
   const [isMicroLearning, setIsMicroLearning] = useState(false);
