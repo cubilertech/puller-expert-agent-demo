@@ -31,29 +31,15 @@ export function ContextGraphHeader({
     fact: nodes.filter(n => n.type === 'fact').length,
   };
 
-  // Detect when new nodes are added and auto-show popover
+  // Detect when new nodes are added - only show visual animation, no popover
   useEffect(() => {
     if (nodes.length > prevNodeCount) {
       setShowAddAnimation(true);
-      setIsPopoverOpen(true);
-      setShowDottedFlow(true);
       
-      // Show dotted flow animation for 2.5 seconds
-      const dottedTimer = setTimeout(() => {
-        setShowDottedFlow(false);
-      }, 2500);
-      
-      // Auto-close the popover after animation completes
-      const closeTimer = setTimeout(() => {
-        setIsPopoverOpen(false);
-      }, 4000);
-      
-      // Keep add animation longer for the button glow
+      // Keep add animation for the button glow only
       const animTimer = setTimeout(() => setShowAddAnimation(false), 4000);
       
       return () => {
-        clearTimeout(dottedTimer);
-        clearTimeout(closeTimer);
         clearTimeout(animTimer);
       };
     }
@@ -298,21 +284,6 @@ export function ContextGraphHeader({
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Fallback content when no learning signal but popover is open */}
-        {!learningSignal && isPopoverOpen && (
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2 className="w-4 h-4 text-success" />
-              <span className="text-xs font-semibold text-success">
-                New Update Added
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">
-              Context has been updated with new information.
-            </p>
-          </div>
-        )}
       </PopoverContent>
     </Popover>
   );
