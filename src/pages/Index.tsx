@@ -183,7 +183,6 @@ export default function Index() {
                   taskStatus={selectedTask.status}
                   taskSource={selectedTask.source}
                   requestor={selectedTask.requestor}
-                  taskConfidence={selectedTask.confidence}
                   onArtifactsReady={() => setArtifactsReady(true)}
                   onCommentAdded={(comment) => {
                     // Add a new knowledge node from the comment

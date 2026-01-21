@@ -1,6 +1,6 @@
 import { motion, Variants, AnimatePresence } from 'framer-motion';
-import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2, Brain, Search, FileCheck, Sparkles, Package, AlertTriangle, Hammer, Gift, Mail, MessageCircle, Calendar, Gauge } from 'lucide-react';
-import { ChatMessage, TaskStatus, CONFIDENCE_THRESHOLD } from '@/types';
+import { Bot, User, Zap, MessageSquare, ChevronDown, ChevronRight, Quote, Send, X, Loader2, Brain, Search, FileCheck, Sparkles, Package, AlertTriangle, Hammer, Gift, Mail, MessageCircle, Calendar } from 'lucide-react';
+import { ChatMessage, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
@@ -134,13 +134,11 @@ type FlowStage = 'requestor' | 'thinking' | 'result' | 'artifacts';
 function ThinkingSteps({ 
   currentStatus, 
   onComplete,
-  isComplete: externalIsComplete = false,
-  confidence
+  isComplete: externalIsComplete = false
 }: { 
   currentStatus: TaskStatus;
   onComplete?: () => void;
   isComplete?: boolean;
-  confidence?: number;
 }) {
   const currentStageIndex = processingStages.findIndex(s => s.status === currentStatus);
   const isProcessing = currentStageIndex >= 0;
@@ -262,23 +260,6 @@ function ThinkingSteps({
               />
             ))}
           </div>
-        )}
-        
-        {/* Confidence Score - show when complete */}
-        {allComplete && confidence !== undefined && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={cn(
-              "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ml-2",
-              confidence >= CONFIDENCE_THRESHOLD 
-                ? "bg-success/10 text-success" 
-                : "bg-warning/10 text-warning"
-            )}
-          >
-            <Gauge className="w-3 h-3" />
-            {confidence}%
-          </motion.div>
         )}
         
         <span className="ml-auto text-[10px] text-muted-foreground">
@@ -462,7 +443,6 @@ interface ContextThreadProps {
   taskStatus?: TaskStatus;
   taskSource?: 'email' | 'slack' | 'meeting';
   requestor?: string;
-  taskConfidence?: number;
   onArtifactsReady?: () => void;
   onCommentAdded?: (comment: { quotedText: string; comment: string }) => void;
 }
@@ -546,8 +526,8 @@ const badgeVariants: Variants = {
 };
 
 
-export function ContextThread({ messages, taskTitle, taskStatus, taskSource, requestor, taskConfidence, onArtifactsReady, onCommentAdded }: ContextThreadProps) {
-  const isProcessingTask = taskStatus && ['ingesting', 'asserting', 'planning', 'building', 'validating', 'generating'].includes(taskStatus);
+export function ContextThread({ messages, taskTitle, taskStatus, taskSource, requestor, onArtifactsReady, onCommentAdded }: ContextThreadProps) {
+  const isProcessingTask = taskStatus && ['ingesting', 'planning', 'reasoning', 'validating'].includes(taskStatus);
   
   // Parse requestor name and title
   const requestorParts = requestor?.split(',').map(s => s.trim()) || [];
@@ -985,7 +965,6 @@ export function ContextThread({ messages, taskTitle, taskStatus, taskSource, req
             currentStatus={taskStatus} 
             onComplete={handleThinkingComplete}
             isComplete={flowStage === 'result' || flowStage === 'artifacts'}
-            confidence={taskConfidence}
           />
         )}
 
