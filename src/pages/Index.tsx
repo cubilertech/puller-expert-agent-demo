@@ -91,8 +91,32 @@ export default function Index() {
     }
   }, [tasks, selectedTaskId]);
 
-  // Enable simulation for ghost tasks
-  useSimulation(true, setTasks);
+  // Handle auto-complete from simulation - update context graph
+  const handleTaskAutoComplete = useCallback((task: Task) => {
+    setIsLearning(true);
+    
+    // Add new knowledge node for the auto-completed task
+    const newNode: KnowledgeNode = {
+      id: `node-${Date.now()}-${task.id}`,
+      label: task.title?.slice(0, 15) || 'Task Complete',
+      type: 'fact',
+      x: 80 + Math.random() * 140,
+      y: 280 + Math.random() * 60,
+      isNew: true,
+      connections: ['node-1'],
+    };
+    
+    setKnowledgeNodes((prev) => [...prev, newNode]);
+    setApprovedCount((prev) => prev + 1);
+    
+    // End learning animation after delay
+    setTimeout(() => {
+      setIsLearning(false);
+    }, 2000);
+  }, []);
+
+  // Enable simulation for ghost tasks with auto-complete callback
+  useSimulation(true, setTasks, handleTaskAutoComplete);
 
   // Refresh demo content
   const handleRefreshDemo = useCallback(() => {
