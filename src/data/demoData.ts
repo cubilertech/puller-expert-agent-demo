@@ -6,15 +6,21 @@ export { allIndustryTasks, allTaskData, getTasksForDemo } from './demoConfig';
 export type { SqlAnnotation } from '@/types';
 
 // Get initial tasks for the default demo mode (milk-run with 3 tasks plus some processing tasks)
-export const initialTasks: Task[] = [
-  // Include first task from each major industry for variety
-  ...getTasksForDemo('quick-demo'),
-  // Add a few more in different statuses
-  ...allIndustryTasks.slice(3, 6).map((task, idx) => ({
-    ...task,
-    status: (['building', 'planning', 'validating'] as const)[idx % 3]
-  }))
-];
+export const initialTasks: Task[] = (() => {
+  const demoTasks = getTasksForDemo('quick-demo');
+  const demoTaskIds = new Set(demoTasks.map(t => t.id));
+  
+  // Add additional tasks that aren't already in the demo set
+  const additionalTasks = allIndustryTasks
+    .filter(t => !demoTaskIds.has(t.id))
+    .slice(0, 3)
+    .map((task, idx) => ({
+      ...task,
+      status: (['building', 'planning', 'validating'] as const)[idx % 3]
+    }));
+  
+  return [...demoTasks, ...additionalTasks];
+})();
 
 // Get task data for a specific task - now pulls from dynamic data
 export function getTaskDataById(taskId: string): TaskData | null {
