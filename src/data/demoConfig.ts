@@ -1,4 +1,4 @@
-import { IndustryVertical, Task, TaskData } from '@/types';
+import { IndustryVertical, Task, TaskData, TaskStatus, CONFIDENCE_THRESHOLD } from '@/types';
 import { retailEcommerceTasks, retailEcommerceTaskData } from './industries/retailEcommerce';
 import { groceryMassMerchTasks, groceryMassMerchTaskData } from './industries/groceryMassMerch';
 import { cpgConsumerBrandsTasks, cpgConsumerBrandsTaskData } from './industries/cpgConsumerBrands';
@@ -9,6 +9,20 @@ import { mediaEntertainmentTasks, mediaEntertainmentTaskData } from './industrie
 // ============================================
 // DEMO CONFIGURATION & DATA ORCHESTRATION
 // ============================================
+
+// Helper to correct status based on confidence threshold
+// Tasks with 'review' status but high confidence should be 'sent' instead
+function correctTaskStatus(task: Task): Task {
+  if (task.status === 'review' && (task.confidence ?? 0) >= CONFIDENCE_THRESHOLD) {
+    return {
+      ...task,
+      status: 'sent' as TaskStatus,
+      sentAt: new Date(Date.now() - 1000 * 60 * 2),
+      sentStatus: 'pending'
+    };
+  }
+  return task;
+}
 
 export interface DemoConfig {
   mode: 'milk-run' | 'industry-specific' | 'full-showcase';
@@ -85,7 +99,7 @@ export const industryConfig: Record<IndustryVertical, { label: string; color: st
   'media-entertainment': { label: 'Media & Entertainment', color: 'text-violet-500', icon: '🎬' }
 };
 
-// Aggregate all tasks from all industries
+// Aggregate all tasks from all industries with status correction applied
 export const allIndustryTasks: Task[] = [
   ...retailEcommerceTasks,
   ...groceryMassMerchTasks,
@@ -93,7 +107,7 @@ export const allIndustryTasks: Task[] = [
   ...hospitalityRestaurantsTasks,
   ...fashionShoesTasks,
   ...mediaEntertainmentTasks
-];
+].map(correctTaskStatus);
 
 // Aggregate all task data from all industries
 export const allTaskData: Record<string, TaskData> = {
