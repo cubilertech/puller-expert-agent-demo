@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { TaskFeed } from '@/components/TaskFeed';
@@ -8,8 +8,33 @@ import { FlyingArtifact } from '@/components/FlyingArtifact';
 import { ControlTowerHeader } from '@/components/ControlTowerHeader';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useAuth } from '@/hooks/useAuth';
-import { Task, KnowledgeNode, LearningSignal } from '@/types';
-import { initialTasks, initialKnowledgeNodes, allTaskData, chatMessages, originalCode, originalCodeAnnotations } from '@/data/demoData';
+import { Task, KnowledgeNode, LearningSignal, ChatMessage } from '@/types';
+import { initialTasks, initialKnowledgeNodes, allTaskData, originalCode, originalCodeAnnotations } from '@/data/demoData';
+
+// Helper to generate dynamic messages for tasks without predefined data
+function generateTaskMessages(task: Task): ChatMessage[] {
+  return [
+    {
+      id: `${task.id}-msg-1`,
+      sender: 'user',
+      content: task.description || task.title,
+      timestamp: task.timestamp,
+      type: 'text'
+    },
+    {
+      id: `${task.id}-msg-2`,
+      sender: 'agent',
+      content: `Analysis complete for "${task.title}". Results generated based on available data sources.`,
+      timestamp: new Date(task.timestamp.getTime() + 1000 * 60 * 5),
+      type: 'action',
+      assumptions: [
+        'Using default business logic for calculations',
+        'Data filtered to relevant time period',
+        'NULL values treated as zero where applicable'
+      ]
+    }
+  ];
+}
 export default function Index() {
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -83,6 +108,13 @@ export default function Index() {
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
   const taskData = selectedTaskId ? allTaskData[selectedTaskId] : null;
+  
+  // Generate dynamic messages for the selected task
+  const taskMessages = useMemo(() => {
+    if (taskData?.messages) return taskData.messages;
+    if (selectedTask) return generateTaskMessages(selectedTask);
+    return [];
+  }, [taskData, selectedTask]);
 
   const handleSendToRequestor = useCallback(() => {
     if (!selectedTaskId) return;
@@ -206,7 +238,7 @@ export default function Index() {
               <ResizablePanel defaultSize={40} minSize={25} maxSize={60}>
                 <div className="h-full overflow-hidden">
                   <ContextThread
-                    messages={taskData?.messages || chatMessages}
+                    messages={taskMessages}
                     taskTitle={selectedTask.description}
                     taskStatus={selectedTask.status}
                     taskSource={selectedTask.source}
