@@ -10,11 +10,19 @@ const WAIT_PERIOD_MS = 15000; // 15 seconds for demo
 
 // Random interval range for injecting new tasks (in milliseconds)
 const INJECT_INTERVAL_MIN_MS = 4000; // Minimum 4 seconds
-const INJECT_INTERVAL_MAX_MS = 12000; // Maximum 12 seconds
+const INJECT_INTERVAL_MAX_MS = 8000; // Maximum 8 seconds
+
+// Per-stage processing time range (in milliseconds) - randomized per task
+const STAGE_TIME_MIN_MS = 800; // Minimum time in a stage
+const STAGE_TIME_MAX_MS = 2500; // Maximum time in a stage
 
 // Helper to get random interval
 const getRandomInjectInterval = () => 
   INJECT_INTERVAL_MIN_MS + Math.random() * (INJECT_INTERVAL_MAX_MS - INJECT_INTERVAL_MIN_MS);
+
+// Helper to get random stage duration
+const getRandomStageDuration = () => 
+  STAGE_TIME_MIN_MS + Math.random() * (STAGE_TIME_MAX_MS - STAGE_TIME_MIN_MS);
 
 export function useSimulation(
   enabled: boolean,
@@ -25,16 +33,40 @@ export function useSimulation(
   const usedTaskIdsRef = useRef<Set<string>>(new Set());
   const taskPoolIndexRef = useRef(0);
 
-  // Progress tasks through pipeline stages
+  // Track per-task stage entry times and durations
+  const taskStageTimersRef = useRef<Map<string, { enteredAt: number; duration: number }>>(new Map());
+
+  // Progress tasks through pipeline stages with randomized timing per task
   const progressTasks = useCallback(() => {
+    const now = Date.now();
+    
     setTasks((prev) =>
       prev.map((task) => {
         // Skip tasks that are already completed or in waiting room
         if (['review', 'sent', 'approved', 'learning'].includes(task.status)) {
+          // Clean up timer for completed tasks
+          taskStageTimersRef.current.delete(task.id);
           return task;
         }
 
         const currentIndex = processingStages.indexOf(task.status);
+        if (currentIndex < 0) return task;
+
+        // Get or create timer for this task's current stage
+        let timer = taskStageTimersRef.current.get(task.id);
+        if (!timer) {
+          timer = { enteredAt: now, duration: getRandomStageDuration() };
+          taskStageTimersRef.current.set(task.id, timer);
+        }
+
+        // Check if enough time has passed for this task to advance
+        const timeInStage = now - timer.enteredAt;
+        if (timeInStage < timer.duration) {
+          return task; // Not ready yet, keep waiting
+        }
+
+        // Clear timer for next stage
+        taskStageTimersRef.current.delete(task.id);
         
         // If at the last processing stage (generating), decide outcome
         if (currentIndex === processingStages.length - 1) {
@@ -55,7 +87,7 @@ export function useSimulation(
         }
 
         // Move to next stage
-        if (currentIndex >= 0 && currentIndex < processingStages.length - 1) {
+        if (currentIndex < processingStages.length - 1) {
           return { ...task, status: processingStages[currentIndex + 1] };
         }
 
@@ -165,10 +197,10 @@ export function useSimulation(
   useEffect(() => {
     if (!enabled) return;
 
-    // Progress tasks through pipeline every 1-2 seconds
+    // Check task progression frequently (actual timing is per-task)
     const progressInterval = setInterval(() => {
       progressTasks();
-    }, 1000 + Math.random() * 1000);
+    }, 500); // Check every 500ms, but each task has its own timer
 
     // Check for feedback/wait period every 2 seconds
     const feedbackInterval = setInterval(() => {
