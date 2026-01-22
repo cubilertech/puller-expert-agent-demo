@@ -208,7 +208,7 @@ const task3: Task = {
   source: 'email',
   industry: 'media-entertainment',
   flags: { urgency: false, humanRequested: true, vip: false },
-  confidence: 91
+  confidence: 76
 };
 
 const task3Messages: ChatMessage[] = [
