@@ -1,5 +1,6 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Task, TaskStatus, SentStatus, CONFIDENCE_THRESHOLD } from '@/types';
+import { allIndustryTasks } from '@/data/demoConfig';
 
 // Pipeline stages for automatic progression
 const processingStages: TaskStatus[] = ['ingesting', 'asserting', 'planning', 'building', 'validating', 'generating'];
@@ -7,11 +8,18 @@ const processingStages: TaskStatus[] = ['ingesting', 'asserting', 'planning', 'b
 // Wait period before auto-advancing from Active to Done (in milliseconds)
 const WAIT_PERIOD_MS = 15000; // 15 seconds for demo
 
+// Interval for injecting new tasks (in milliseconds)
+const INJECT_INTERVAL_MS = 8000; // Every 8 seconds
+
 export function useSimulation(
   enabled: boolean,
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>,
   onTaskAutoComplete?: (task: Task) => void
 ) {
+  // Track which tasks from the pool have been used
+  const usedTaskIdsRef = useRef<Set<string>>(new Set());
+  const taskPoolIndexRef = useRef(0);
+
   // Progress tasks through pipeline stages
   const progressTasks = useCallback(() => {
     setTasks((prev) =>
@@ -95,6 +103,47 @@ export function useSimulation(
     });
   }, [setTasks, onTaskAutoComplete]);
 
+  // Inject new tasks from the pool into the queue
+  const injectNewTask = useCallback(() => {
+    setTasks((prev) => {
+      // Count tasks in incoming queue (processing stages + review)
+      const incomingStatuses = [...processingStages, 'review'];
+      const incomingCount = prev.filter(t => incomingStatuses.includes(t.status)).length;
+      
+      // Only inject if we have fewer than 3 tasks in incoming
+      if (incomingCount >= 3) return prev;
+
+      // Find next unused task from the pool
+      const availableTasks = allIndustryTasks.filter(t => !usedTaskIdsRef.current.has(t.id));
+      
+      if (availableTasks.length === 0) {
+        // Reset the pool if all tasks have been used
+        usedTaskIdsRef.current.clear();
+        taskPoolIndexRef.current = 0;
+        return prev;
+      }
+
+      // Get next task from pool (cycle through)
+      const nextTask = availableTasks[taskPoolIndexRef.current % availableTasks.length];
+      taskPoolIndexRef.current++;
+      
+      // Mark as used
+      usedTaskIdsRef.current.add(nextTask.id);
+
+      // Create a new instance with fresh timestamp and ingesting status
+      const newTask: Task = {
+        ...nextTask,
+        id: `${nextTask.id}-${Date.now()}`, // Unique ID to prevent duplicates
+        status: 'ingesting' as TaskStatus,
+        timestamp: new Date(),
+        sentAt: undefined,
+        sentStatus: undefined
+      };
+
+      return [...prev, newTask];
+    });
+  }, [setTasks]);
+
   useEffect(() => {
     if (!enabled) return;
 
@@ -108,11 +157,17 @@ export function useSimulation(
       simulateFeedback();
     }, 2000);
 
+    // Inject new tasks periodically
+    const injectInterval = setInterval(() => {
+      injectNewTask();
+    }, INJECT_INTERVAL_MS);
+
     return () => {
       clearInterval(progressInterval);
       clearInterval(feedbackInterval);
+      clearInterval(injectInterval);
     };
-  }, [enabled, progressTasks, simulateFeedback]);
+  }, [enabled, progressTasks, simulateFeedback, injectNewTask]);
 
   return {};
 }
