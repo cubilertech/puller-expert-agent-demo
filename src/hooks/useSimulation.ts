@@ -13,8 +13,8 @@ const INJECT_INTERVAL_MIN_MS = 4000; // Minimum 4 seconds
 const INJECT_INTERVAL_MAX_MS = 8000; // Maximum 8 seconds
 
 // Per-stage processing time range (in milliseconds) - randomized per task
-const STAGE_TIME_MIN_MS = 800; // Minimum time in a stage
-const STAGE_TIME_MAX_MS = 2500; // Maximum time in a stage
+const STAGE_TIME_MIN_MS = 500; // Minimum time in a stage
+const STAGE_TIME_MAX_MS = 1500; // Maximum time in a stage
 
 // Helper to get random interval
 const getRandomInjectInterval = () => 
