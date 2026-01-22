@@ -86,17 +86,6 @@ export function useSimulation(
           return completedTask;
         }
 
-        // Small chance of negative feedback (returns to review)
-        if (task.sentStatus === 'viewed' && Math.random() < 0.02) {
-          return { 
-            ...task, 
-            status: 'review' as TaskStatus,
-            sentStatus: undefined,
-            sentAt: undefined,
-            requestorFeedback: 'negative' as const
-          };
-        }
-
         return task;
       });
       return updatedTasks;
