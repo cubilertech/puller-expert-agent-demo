@@ -103,7 +103,7 @@ export function useSimulation(
       const blockedOriginalIds = new Set(
         prev
           .filter(t => [...incomingStatuses, ...activeStatuses].includes(t.status))
-          .map(t => t.originalId || t.id.replace(/-\d+$/, '')) // Remove timestamp suffix to get original ID
+          .map(t => t.originalId || t.id.split('-')[0])
       );
 
       // Find available tasks: not used in current cycle AND not blocked
