@@ -103,7 +103,17 @@ export function useSimulation(
       const blockedOriginalIds = new Set(
         prev
           .filter(t => [...incomingStatuses, ...activeStatuses].includes(t.status))
-          .map(t => t.originalId || t.id.split('-')[0])
+          .map(t => {
+            if (t.originalId) return t.originalId;
+            // For initial tasks without originalId, extract template ID
+            // Handle both 'retail-1' (initial) and 'retail-1-1737123456789' (recycled) formats
+            const parts = t.id.split('-');
+            // If last part looks like a timestamp (13+ digits), remove it
+            if (parts.length > 2 && parts[parts.length - 1].length >= 13) {
+              return parts.slice(0, -1).join('-');
+            }
+            return t.id; // Return full ID for initial tasks like 'retail-1'
+          })
       );
 
       // Find available tasks: not used in current cycle AND not blocked

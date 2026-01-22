@@ -21,7 +21,10 @@ function correctTaskStatus(task: Task): Task {
 
 // Get initial tasks for the default demo mode (milk-run with 3 tasks plus some processing tasks)
 export const initialTasks: Task[] = (() => {
-  const demoTasks = getTasksForDemo('quick-demo').map(correctTaskStatus);
+  const demoTasks = getTasksForDemo('quick-demo')
+    .map(correctTaskStatus)
+    .map(t => ({ ...t, originalId: t.id })); // Add originalId
+  
   const demoTaskIds = new Set(demoTasks.map(t => t.id));
   
   // Add additional tasks that aren't already in the demo set
@@ -30,6 +33,7 @@ export const initialTasks: Task[] = (() => {
     .slice(0, 3)
     .map((task, idx) => ({
       ...task,
+      originalId: task.id, // Add originalId
       status: (['building', 'planning', 'validating'] as const)[idx % 3]
     }));
   
