@@ -131,7 +131,8 @@ export default function Index() {
   }, []);
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
-  const taskData = selectedTaskId ? allTaskData[selectedTaskId] : null;
+  const taskDataId = selectedTask?.originalId || selectedTaskId;
+  const taskData = taskDataId ? allTaskData[taskDataId] : null;
   
   // Generate dynamic messages for the selected task
   const taskMessages = useMemo(() => {
