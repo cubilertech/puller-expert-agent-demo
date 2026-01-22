@@ -98,10 +98,10 @@ export function useSimulation(
   useEffect(() => {
     if (!enabled) return;
 
-    // Progress tasks through pipeline every 2-3 seconds
+    // Progress tasks through pipeline every 2-4 seconds
     const progressInterval = setInterval(() => {
       progressTasks();
-    }, 2000 + Math.random() * 1000);
+    }, 2000 + Math.random() * 2000);
 
     // Check for feedback/wait period every 2 seconds
     const feedbackInterval = setInterval(() => {
