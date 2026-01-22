@@ -5,7 +5,7 @@ import { Task, TaskStatus, SentStatus, CONFIDENCE_THRESHOLD } from '@/types';
 const processingStages: TaskStatus[] = ['ingesting', 'asserting', 'planning', 'building', 'validating', 'generating'];
 
 // Wait period before auto-advancing from Active to Done (in milliseconds)
-const WAIT_PERIOD_MS = 30000; // 30 seconds for demo
+const WAIT_PERIOD_MS = 15000; // 15 seconds for demo
 
 export function useSimulation(
   enabled: boolean,
@@ -98,10 +98,10 @@ export function useSimulation(
   useEffect(() => {
     if (!enabled) return;
 
-    // Progress tasks through pipeline every 3-5 seconds
+    // Progress tasks through pipeline every 2-3 seconds
     const progressInterval = setInterval(() => {
       progressTasks();
-    }, 3000 + Math.random() * 2000);
+    }, 2000 + Math.random() * 1000);
 
     // Check for feedback/wait period every 2 seconds
     const feedbackInterval = setInterval(() => {
