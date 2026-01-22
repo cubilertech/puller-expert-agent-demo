@@ -8,8 +8,13 @@ const processingStages: TaskStatus[] = ['ingesting', 'asserting', 'planning', 'b
 // Wait period before auto-advancing from Active to Done (in milliseconds)
 const WAIT_PERIOD_MS = 15000; // 15 seconds for demo
 
-// Interval for injecting new tasks (in milliseconds)
-const INJECT_INTERVAL_MS = 8000; // Every 8 seconds
+// Random interval range for injecting new tasks (in milliseconds)
+const INJECT_INTERVAL_MIN_MS = 4000; // Minimum 4 seconds
+const INJECT_INTERVAL_MAX_MS = 12000; // Maximum 12 seconds
+
+// Helper to get random interval
+const getRandomInjectInterval = () => 
+  INJECT_INTERVAL_MIN_MS + Math.random() * (INJECT_INTERVAL_MAX_MS - INJECT_INTERVAL_MIN_MS);
 
 export function useSimulation(
   enabled: boolean,
@@ -170,15 +175,20 @@ export function useSimulation(
       simulateFeedback();
     }, 2000);
 
-    // Inject new tasks periodically
-    const injectInterval = setInterval(() => {
-      injectNewTask();
-    }, INJECT_INTERVAL_MS);
+    // Inject new tasks with random intervals for realistic feel
+    let injectTimeout: NodeJS.Timeout;
+    const scheduleNextInject = () => {
+      injectTimeout = setTimeout(() => {
+        injectNewTask();
+        scheduleNextInject(); // Schedule next with new random delay
+      }, getRandomInjectInterval());
+    };
+    scheduleNextInject();
 
     return () => {
       clearInterval(progressInterval);
       clearInterval(feedbackInterval);
-      clearInterval(injectInterval);
+      clearTimeout(injectTimeout);
     };
   }, [enabled, progressTasks, simulateFeedback, injectNewTask]);
 
