@@ -20,6 +20,7 @@ export interface TaskFlags {
 
 export interface Task {
   id: string;
+  originalId?: string; // Original task ID for data lookup when task is recycled
   title: string;
   requestor: string;
   status: TaskStatus;

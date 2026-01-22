@@ -134,6 +134,7 @@ export function useSimulation(
       const newTask: Task = {
         ...nextTask,
         id: `${nextTask.id}-${Date.now()}`, // Unique ID to prevent duplicates
+        originalId: nextTask.id, // Keep original ID for data lookup
         status: 'ingesting' as TaskStatus,
         timestamp: new Date(),
         sentAt: undefined,
