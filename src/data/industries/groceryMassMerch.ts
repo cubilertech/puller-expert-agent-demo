@@ -107,7 +107,7 @@ const task2: Task = {
   source: 'slack',
   industry: 'grocery-mass-merch',
   flags: { urgency: false, humanRequested: true, vip: false },
-  confidence: 78
+  confidence: 68
 };
 
 const task2Messages: ChatMessage[] = [

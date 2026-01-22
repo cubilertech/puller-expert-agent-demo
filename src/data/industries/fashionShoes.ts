@@ -393,7 +393,7 @@ const task5: Task = {
   source: 'email',
   industry: 'fashion-shoes',
   flags: { urgency: false, humanRequested: false, vip: false },
-  confidence: 88
+  confidence: 74
 };
 
 const task5Messages: ChatMessage[] = [

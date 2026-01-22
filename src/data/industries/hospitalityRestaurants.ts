@@ -19,7 +19,7 @@ const task1: Task = {
   source: 'email',
   industry: 'hospitality-restaurants',
   flags: { urgency: true, humanRequested: false, vip: false },
-  confidence: 89
+  confidence: 71
 };
 
 const task1Messages: ChatMessage[] = [

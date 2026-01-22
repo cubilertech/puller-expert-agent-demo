@@ -304,7 +304,7 @@ const task4: Task = {
   source: 'slack',
   industry: 'cpg-consumer-brands',
   flags: { urgency: true, humanRequested: false, vip: false },
-  confidence: 83
+  confidence: 75
 };
 
 const task4Messages: ChatMessage[] = [
