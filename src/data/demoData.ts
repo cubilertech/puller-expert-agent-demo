@@ -58,13 +58,7 @@ export const initialKnowledgeNodes: KnowledgeNode[] = [
   { id: 'node-6', label: 'Subscription Logic', type: 'entity', x: 250, y: 240, connections: [] },
 ];
 
-export const ghostTaskTemplates = [
-  { title: 'Customer LTV by Cohort', requestor: 'Finance', priority: 'high' as const, source: 'email' as const, flags: { urgency: true, humanRequested: false, vip: true } },
-  { title: 'Subscription Churn Drivers', requestor: 'Retention Team', priority: 'high' as const, source: 'slack' as const, flags: { urgency: false, humanRequested: true, vip: false } },
-  { title: 'Promo Code Effectiveness', requestor: 'Marketing', priority: 'medium' as const, source: 'email' as const, flags: { urgency: false, humanRequested: false, vip: false } },
-  { title: 'Inventory Reorder Analysis', requestor: 'Supply Chain', priority: 'low' as const, source: 'meeting' as const, flags: { urgency: false, humanRequested: false, vip: false } },
-  { title: 'Shipping Cost Optimization', requestor: 'Operations', priority: 'medium' as const, source: 'slack' as const, flags: { urgency: true, humanRequested: false, vip: false } },
-];
+// Ghost task templates removed - using expanded industry demo data instead
 
 // Task-specific data mapping for backward compatibility
 export const taskDataMap: Record<string, { messages: ChatMessage[], code: CodeDiff[], annotations: SqlAnnotation[], knowledgeUpdate: string }> = Object.fromEntries(
