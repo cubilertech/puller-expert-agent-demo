@@ -95,35 +95,48 @@ export function useSimulation(
   // Inject new tasks from the pool into the queue
   const injectNewTask = useCallback(() => {
     setTasks((prev) => {
-      // Count tasks in incoming queue (processing stages + review)
-      const incomingStatuses = [...processingStages, 'review'];
-      const incomingCount = prev.filter(t => incomingStatuses.includes(t.status)).length;
+      // Define which statuses block recycling
+      const incomingStatuses: TaskStatus[] = [...processingStages, 'review'];
+      const activeStatuses: TaskStatus[] = ['sent'];
       
-      // Only inject if we have fewer than 3 tasks in incoming
-      if (incomingCount >= 3) return prev;
+      // Get original IDs of tasks currently in blocked states
+      const blockedOriginalIds = new Set(
+        prev
+          .filter(t => [...incomingStatuses, ...activeStatuses].includes(t.status))
+          .map(t => t.originalId || t.id.split('-')[0])
+      );
 
-      // Find next unused task from the pool
-      const availableTasks = allIndustryTasks.filter(t => !usedTaskIdsRef.current.has(t.id));
-      
+      // Find available tasks: not used in current cycle AND not blocked
+      let availableTasks = allIndustryTasks.filter(
+        t => !usedTaskIdsRef.current.has(t.id) && !blockedOriginalIds.has(t.id)
+      );
+
+      // If all tasks used in cycle, start new cycle
       if (availableTasks.length === 0) {
-        // Reset the pool if all tasks have been used
         usedTaskIdsRef.current.clear();
         taskPoolIndexRef.current = 0;
-        return prev;
+        
+        // Re-filter excluding blocked tasks
+        availableTasks = allIndustryTasks.filter(t => !blockedOriginalIds.has(t.id));
+        
+        // If all 30 tasks are in incoming/active, wait
+        if (availableTasks.length === 0) {
+          return prev;
+        }
       }
 
-      // Get next task from pool (cycle through)
+      // Get next task from pool
       const nextTask = availableTasks[taskPoolIndexRef.current % availableTasks.length];
       taskPoolIndexRef.current++;
       
-      // Mark as used
+      // Mark as used in this cycle
       usedTaskIdsRef.current.add(nextTask.id);
 
-      // Create a new instance with fresh timestamp and ingesting status
+      // Create new instance with unique ID
       const newTask: Task = {
         ...nextTask,
-        id: `${nextTask.id}-${Date.now()}`, // Unique ID to prevent duplicates
-        originalId: nextTask.id, // Keep original ID for data lookup
+        id: `${nextTask.id}-${Date.now()}`,
+        originalId: nextTask.id,
         status: 'ingesting' as TaskStatus,
         timestamp: new Date(),
         sentAt: undefined,
