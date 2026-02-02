@@ -6,8 +6,10 @@ import { ContextThread } from '@/components/ContextThread';
 import { ArtifactEditor } from '@/components/ArtifactEditor';
 import { FlyingArtifact } from '@/components/FlyingArtifact';
 import { ControlTowerHeader } from '@/components/ControlTowerHeader';
+import { ContextHubPanel } from '@/components/ContextHubPanel';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useAuth } from '@/hooks/useAuth';
+import { useContextHub } from '@/hooks/useContextHub';
 import { Task, KnowledgeNode, LearningSignal, ChatMessage } from '@/types';
 import { initialTasks, initialKnowledgeNodes, allTaskData, originalCode, originalCodeAnnotations } from '@/data/demoData';
 
@@ -46,6 +48,10 @@ export default function Index() {
       navigate('/login');
     }
   }, [navigate]);
+  
+  // Context Hub state management
+  const { isOpen: isContextHubOpen, openPanel: openContextHub, closePanel: closeContextHub, contextItems, addContextItem, convertToKnowledgeNode } = useContextHub();
+  
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialTasks[0]?.id || null);
   const [knowledgeNodes, setKnowledgeNodes] = useState<KnowledgeNode[]>(initialKnowledgeNodes);
@@ -255,6 +261,17 @@ export default function Index() {
     }
   }, [learningSignal]);
 
+  // Handle adding context from the hub
+  const handleAddContext = useCallback((item: Omit<typeof contextItems[0], 'id' | 'timestamp' | 'status'>) => {
+    const newItem = addContextItem(item);
+    
+    // Convert to knowledge node and add to graph
+    setTimeout(() => {
+      const newNode = convertToKnowledgeNode({ ...newItem, id: newItem.id, timestamp: new Date(), status: 'processed' });
+      setKnowledgeNodes((prev) => [...prev, newNode]);
+    }, 1500);
+  }, [addContextItem, convertToKnowledgeNode]);
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
@@ -268,6 +285,7 @@ export default function Index() {
         newNodeLabel={learningSignal?.rule}
         learningSignal={learningSignal}
         onDismissSignal={handleDismissToast}
+        onOpenContextHub={openContextHub}
       />
 
       {/* Main Layout */}
@@ -427,6 +445,14 @@ export default function Index() {
       </div>
 
       {/* Context Graph is now integrated into the header */}
+
+      {/* Context Hub Panel */}
+      <ContextHubPanel
+        isOpen={isContextHubOpen}
+        onClose={closeContextHub}
+        contextItems={contextItems}
+        onAddContext={handleAddContext}
+      />
 
       {/* Flying Artifact Animation */}
       <FlyingArtifact

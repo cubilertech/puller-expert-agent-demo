@@ -10,6 +10,7 @@ interface ContextGraphHeaderProps {
   newNodeLabel?: string;
   learningSignal?: LearningSignal | null;
   onDismissSignal?: () => void;
+  onClick?: () => void;
 }
 
 export function ContextGraphHeader({ 
@@ -17,7 +18,8 @@ export function ContextGraphHeader({
   isLearning, 
   newNodeLabel,
   learningSignal,
-  onDismissSignal 
+  onDismissSignal,
+  onClick
 }: ContextGraphHeaderProps) {
   const [showAddAnimation, setShowAddAnimation] = useState(false);
   const [prevNodeCount, setPrevNodeCount] = useState(nodes.length);
@@ -56,9 +58,11 @@ export function ContextGraphHeader({
   }, [learningSignal]);
 
   return (
-    <div
+    <button
+      onClick={onClick}
       className={cn(
-        'flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all relative overflow-hidden',
+        'flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all relative overflow-hidden cursor-pointer',
+        'hover:border-primary/50 hover:bg-primary/5',
         isLearning || showAddAnimation
           ? 'bg-success/10 border-success/30'
           : 'bg-muted/30 border-border'
@@ -170,6 +174,6 @@ export function ContextGraphHeader({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </button>
   );
 }

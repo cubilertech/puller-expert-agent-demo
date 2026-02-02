@@ -13,6 +13,7 @@ interface ControlTowerHeaderProps {
   newNodeLabel?: string;
   learningSignal?: LearningSignal | null;
   onDismissSignal?: () => void;
+  onOpenContextHub?: () => void;
 }
 
 export function ControlTowerHeader({
@@ -23,7 +24,8 @@ export function ControlTowerHeader({
   knowledgeNodes = [],
   newNodeLabel,
   learningSignal,
-  onDismissSignal
+  onDismissSignal,
+  onOpenContextHub
 }: ControlTowerHeaderProps) {
   return (
     <header className="h-14 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-4">
@@ -67,6 +69,7 @@ export function ControlTowerHeader({
             newNodeLabel={newNodeLabel}
             learningSignal={learningSignal}
             onDismissSignal={onDismissSignal}
+            onClick={onOpenContextHub}
           />
         </div>
 

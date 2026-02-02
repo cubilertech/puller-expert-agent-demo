@@ -99,5 +99,20 @@ export interface LearningSignal {
   timestamp: Date;
 }
 
+// Context Hub types
+export type ContextItemType = 'entity' | 'rule' | 'fact';
+export type ContextSource = 'upload' | 'chat' | 'api' | 'screen-record';
+export type ContextStatus = 'pending' | 'processed' | 'error';
+
+export interface ContextItem {
+  id: string;
+  type: ContextItemType;
+  source: ContextSource;
+  content: string;
+  metadata?: Record<string, unknown>;
+  timestamp: Date;
+  status: ContextStatus;
+}
+
 // Expert can adjust this - tasks below this threshold go to expert review
 export const CONFIDENCE_THRESHOLD = 80;
