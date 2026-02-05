@@ -19,11 +19,21 @@ const loginSchema = z.object({
   })
 });
 
-// Valid credentials (in production, this would be handled server-side)
-const VALID_CREDENTIALS = {
-  email: "zac@puller.ai",
-  password: "123456"
-};
+ /**
+  * ⚠️ DEMO CREDENTIALS ONLY
+  * 
+  * These hardcoded credentials are for demonstration purposes only.
+  * In a production environment, authentication should be handled via:
+  * - A secure backend authentication service (e.g., Supabase Auth, Auth0)
+  * - Proper password hashing and secure token management
+  * - Environment-based configuration
+  * 
+  * DO NOT use hardcoded credentials in production applications.
+  */
+ const DEMO_CREDENTIALS = {
+   email: "zac@puller.ai",
+   password: "123456"
+ };
 export default function Login() {
   const navigate = useNavigate();
   const {
@@ -66,7 +76,7 @@ export default function Login() {
     await new Promise(resolve => setTimeout(resolve, 800));
 
     // Check credentials
-    if (email.toLowerCase() === VALID_CREDENTIALS.email && password === VALID_CREDENTIALS.password) {
+     if (email.toLowerCase() === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
       // Store auth state
       sessionStorage.setItem('isAuthenticated', 'true');
       sessionStorage.setItem('userEmail', email);
