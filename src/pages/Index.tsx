@@ -212,8 +212,8 @@ export default function Index() {
   }, [selectedTaskId]);
 
   const handleOverride = useCallback(() => {
-    // In a real app, this would open an editing interface
-    console.log('Override requested');
+     // Override functionality - opens editing interface in production
+     // Currently a placeholder for future implementation
   }, []);
 
   const handleForceComplete = useCallback((taskId: string) => {

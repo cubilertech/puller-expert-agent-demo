@@ -1,6 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+ /**
+  * ⚠️ DEMO AUTHENTICATION HOOK
+  * 
+  * This hook provides simple session-based authentication for demo purposes only.
+  * It uses sessionStorage which is NOT secure for production applications.
+  * 
+  * For production, implement:
+  * - Secure token-based authentication (JWT)
+  * - HTTP-only cookies for session management
+  * - Proper backend authentication service
+  * - Secure logout with token invalidation
+  */
 interface AuthState {
   isAuthenticated: boolean;
   userEmail: string | null;
