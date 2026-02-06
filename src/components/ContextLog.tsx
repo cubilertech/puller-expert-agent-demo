@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, MessageSquare, Plug, Video, ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { Upload, MessageSquare, Plug, Video, ChevronDown, ChevronRight, Clock, Sparkles } from 'lucide-react';
 import { ContextItem, ContextSource } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -70,23 +70,51 @@ function groupItemsByDate(items: ContextItem[]): { label: string; items: Context
   return groups.filter((g) => g.items.length > 0);
 }
 
-function ContextLogEntry({ item }: { item: ContextItem }) {
+function ContextLogEntry({ item, isProcessing }: { item: ContextItem; isProcessing?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const Icon = sourceIcons[item.source];
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+      animate={{ 
+        opacity: 1, 
+        y: 0, 
+        scale: 1,
+        boxShadow: isProcessing ? '0 0 20px hsl(var(--primary) / 0.3)' : 'none'
+      }}
+      transition={{ duration: 0.3 }}
       className={cn(
-        'border border-border rounded-lg p-3 cursor-pointer transition-all hover:border-primary/30 hover:bg-muted/30',
-        item.status === 'pending' && 'opacity-60'
+        'border border-border rounded-lg p-3 cursor-pointer transition-all hover:border-primary/30 hover:bg-muted/30 relative overflow-hidden',
+        item.status === 'pending' && 'border-primary/50 bg-primary/5',
+        isProcessing && 'border-primary/60'
       )}
       onClick={() => setIsExpanded(!isExpanded)}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-          <Icon className="w-4 h-4 text-muted-foreground" />
+      {/* Processing shimmer effect */}
+      {item.status === 'pending' && (
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent"
+          animate={{ x: ['-100%', '100%'] }}
+          transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+        />
+      )}
+      
+      <div className="flex items-start gap-3 relative z-10">
+        <div className={cn(
+          'flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+          item.status === 'pending' ? 'bg-primary/20' : 'bg-muted'
+        )}>
+          {item.status === 'pending' ? (
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+            >
+              <Sparkles className="w-4 h-4 text-primary" />
+            </motion.div>
+          ) : (
+            <Icon className="w-4 h-4 text-muted-foreground" />
+          )}
         </div>
         
         <div className="flex-1 min-w-0">
@@ -101,11 +129,13 @@ function ContextLogEntry({ item }: { item: ContextItem }) {
               {sourceLabels[item.source]}
             </span>
             {item.status === 'pending' && (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full"
-              />
+              <motion.span
+                className="text-[10px] text-primary font-medium"
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+              >
+                Processing...
+              </motion.span>
             )}
           </div>
           
@@ -134,7 +164,7 @@ function ContextLogEntry({ item }: { item: ContextItem }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
+            className="overflow-hidden relative z-10"
           >
             <div className="mt-3 pt-3 border-t border-border">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Metadata</p>
@@ -156,6 +186,16 @@ function ContextLogEntry({ item }: { item: ContextItem }) {
 
 export function ContextLog({ items }: ContextLogProps) {
   const groupedItems = groupItemsByDate(items);
+  
+  // Track which items are currently processing - hooks must be before early return
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  
+  useEffect(() => {
+    const pendingItems = items.filter(i => i.status === 'pending');
+    if (pendingItems.length > 0) {
+      setProcessingIds(new Set(pendingItems.map(i => i.id)));
+    }
+  }, [items]);
 
   if (items.length === 0) {
     return (
@@ -176,6 +216,31 @@ export function ContextLog({ items }: ContextLogProps) {
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-6">
+        {/* Processing summary banner */}
+        <AnimatePresence>
+          {items.some(i => i.status === 'pending') && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-primary/10 border border-primary/30 rounded-lg p-3 flex items-center gap-3"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+              >
+                <Sparkles className="w-4 h-4 text-primary" />
+              </motion.div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Processing new context...</p>
+                <p className="text-xs text-muted-foreground">
+                  {items.filter(i => i.status === 'pending').length} item(s) being analyzed
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {groupedItems.map((group) => (
           <div key={group.label}>
             <div className="flex items-center gap-2 mb-3">
@@ -183,10 +248,17 @@ export function ContextLog({ items }: ContextLogProps) {
                 {group.label}
               </span>
               <div className="flex-1 h-px bg-border" />
+              <span className="text-[10px] text-muted-foreground">
+                {group.items.length} items
+              </span>
             </div>
             <div className="space-y-2">
               {group.items.map((item) => (
-                <ContextLogEntry key={item.id} item={item} />
+                <ContextLogEntry 
+                  key={item.id} 
+                  item={item} 
+                  isProcessing={processingIds.has(item.id)}
+                />
               ))}
             </div>
           </div>

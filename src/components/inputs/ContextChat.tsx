@@ -14,6 +14,14 @@ const examplePrompts = [
   { text: 'NULL values should be treated as zero', type: 'rule' as const },
   { text: 'Product categories: Electronics, Apparel, Home', type: 'entity' as const },
   { text: 'Peak sales hours are 6-9 PM EST', type: 'fact' as const },
+  { text: 'Exclude test accounts from all reports', type: 'rule' as const },
+  { text: 'Revenue targets: Q1=$2M, Q2=$2.5M', type: 'fact' as const },
+  { text: 'Regional managers: North=Sarah, South=Mike', type: 'entity' as const },
+  { text: 'Churn = no activity in 90+ days', type: 'rule' as const },
+  { text: 'Premium tier starts at $500/month', type: 'fact' as const },
+  { text: 'Warehouse codes: NYC=01, LA=02, CHI=03', type: 'entity' as const },
+  { text: 'Weekend orders ship Monday', type: 'rule' as const },
+  { text: 'Customer segments: SMB, Mid-Market, Enterprise', type: 'entity' as const },
 ];
 
 const typeOptions: { value: ContextItemType; label: string; color: string }[] = [
@@ -52,22 +60,24 @@ export function ContextChat({ onSubmit }: ContextChatProps) {
         </p>
       </div>
 
-      {/* Example prompts */}
+      {/* Example prompts - scrollable */}
       <div className="mb-4">
         <div className="flex items-center gap-1.5 mb-2">
           <Lightbulb className="w-3 h-3 text-muted-foreground" />
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Examples</span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {examplePrompts.map((example, i) => (
-            <button
-              key={i}
-              onClick={() => handleExampleClick(example)}
-              className="text-xs px-2 py-1 rounded-full border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              {example.text.length > 25 ? example.text.slice(0, 25) + '...' : example.text}
-            </button>
-          ))}
+        <div className="max-h-[120px] overflow-y-auto pr-1 scrollbar-thin">
+          <div className="flex flex-wrap gap-1.5">
+            {examplePrompts.map((example, i) => (
+              <button
+                key={i}
+                onClick={() => handleExampleClick(example)}
+                className="text-xs px-2 py-1 rounded-full border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                {example.text.length > 30 ? example.text.slice(0, 30) + '...' : example.text}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
