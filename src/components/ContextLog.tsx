@@ -216,30 +216,6 @@ export function ContextLog({ items }: ContextLogProps) {
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-6">
-        {/* Processing summary banner */}
-        <AnimatePresence>
-          {items.some(i => i.status === 'pending') && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-primary/10 border border-primary/30 rounded-lg p-3 flex items-center gap-3"
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-              >
-                <Sparkles className="w-4 h-4 text-primary" />
-              </motion.div>
-              <div>
-                <p className="text-sm font-medium text-foreground">Processing new context...</p>
-                <p className="text-xs text-muted-foreground">
-                  {items.filter(i => i.status === 'pending').length} item(s) being analyzed
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {groupedItems.map((group) => (
           <div key={group.label}>

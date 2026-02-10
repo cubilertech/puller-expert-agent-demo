@@ -10,6 +10,7 @@ interface ContextChatProps {
 }
 
 const examplePrompts = [
+  { text: 'Our retail week runs Sunday-Saturday', type: 'rule' as const, isGuided: true },
   { text: 'Our fiscal year ends in March', type: 'rule' as const },
   { text: 'NULL values should be treated as zero', type: 'rule' as const },
   { text: 'Product categories: Electronics, Apparel, Home', type: 'entity' as const },
@@ -22,7 +23,6 @@ const examplePrompts = [
   { text: 'Warehouse codes: NYC=01, LA=02, CHI=03', type: 'entity' as const },
   { text: 'Weekend orders ship Monday', type: 'rule' as const },
   { text: 'Customer segments: SMB, Mid-Market, Enterprise', type: 'entity' as const },
-  { text: 'Our retail week runs Sunday-Saturday', type: 'rule' as const, isGuided: true },
 ];
 
 const typeOptions: { value: ContextItemType; label: string; color: string }[] = [
