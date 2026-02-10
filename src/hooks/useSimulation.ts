@@ -154,7 +154,7 @@ export function useSimulation(
       );
 
       // On the 5th injection, force the hero task (retail-1)
-      if (injectCountRef.current === 5) {
+      if (injectCountRef.current === 2) {
         const heroTemplate = allIndustryTasks.find(t => t.id === 'retail-1');
         if (heroTemplate && !blockedOriginalIds.has('retail-1')) {
           usedTaskIdsRef.current.add('retail-1');
