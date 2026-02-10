@@ -52,6 +52,7 @@ export default function Index() {
 
   // Task data overrides for guided scenario
   const [taskDataOverrides, setTaskDataOverrides] = useState<Record<string, TaskData>>({});
+  const tasksRef = useRef<Task[]>(initialTasks);
 
   // Guided scenario handler
   const handleGuidedContextTrigger = useCallback(() => {
@@ -59,11 +60,10 @@ export default function Index() {
     setTaskDataOverrides((prev) => ({ ...prev, [GUIDED_TRIGGER_TASK_ID]: updatedData }));
 
     // Select the hero task so the user sees the update
-    setSelectedTaskId((current) => {
-      // Find actual task id (may be recycled with different instance id)
-      const heroTask = tasks.find(t => (t.originalId || t.id) === GUIDED_TRIGGER_TASK_ID);
-      return heroTask ? heroTask.id : current;
-    });
+    const heroTask = tasksRef.current.find(t => (t.originalId || t.id) === GUIDED_TRIGGER_TASK_ID);
+    if (heroTask) {
+      setSelectedTaskId(heroTask.id);
+    }
 
     // Trigger learning signal
     setTimeout(() => {
@@ -93,6 +93,8 @@ export default function Index() {
   const { isOpen: isContextHubOpen, openPanel: openContextHub, closePanel: closeContextHub, contextItems, addContextItem, convertToKnowledgeNode } = useContextHub({ onGuidedContextTrigger: handleGuidedContextTrigger });
   
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  // Keep tasksRef in sync for stable callbacks
+  useEffect(() => { tasksRef.current = tasks; }, [tasks]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialTasks[0]?.id || null);
   const [knowledgeNodes, setKnowledgeNodes] = useState<KnowledgeNode[]>(initialKnowledgeNodes);
   const [isApproving, setIsApproving] = useState(false);
