@@ -782,7 +782,8 @@ export function ContextThread({ messages, taskTitle, taskStatus, taskSource, req
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="bg-accent/30 rounded-md p-3 border border-primary/20 overflow-hidden"
+                      className="bg-accent/30 rounded-md p-3 border border-primary/20 overflow-hidden select-text cursor-text"
+                      onMouseUp={() => handleTextSelection(message.id)}
                     >
                       <ul className="space-y-2">
                         {message.assumptions!.map((assumption, idx) => (
@@ -854,7 +855,8 @@ export function ContextThread({ messages, taskTitle, taskStatus, taskSource, req
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="bg-muted/50 rounded-md p-3 border border-border/50 overflow-hidden"
+                      className="bg-muted/50 rounded-md p-3 border border-border/50 overflow-hidden select-text cursor-text"
+                      onMouseUp={() => handleTextSelection(message.id)}
                     >
                       <ul className="space-y-2">
                         {message.assumptions!.map((assumption, idx) => (
