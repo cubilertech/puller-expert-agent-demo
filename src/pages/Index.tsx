@@ -406,6 +406,12 @@ export default function Index() {
                       onOverride={handleOverride}
                       isApproving={isApproving}
                       hideActions={selectedTask.status === 'sent' || selectedTask.status === 'approved'}
+                      onCommentAdded={(comment) => {
+                        const commentText = `${comment.selection} ${comment.text}`;
+                        if (isGuidedTrigger(commentText)) {
+                          handleGuidedContextTrigger();
+                        }
+                      }}
                     />
                   ) : (
                     <div className="h-full flex flex-col bg-background">
