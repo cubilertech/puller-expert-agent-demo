@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ContextItem, ContextItemType, ContextSource, KnowledgeNode } from '@/types';
+import { isGuidedTrigger } from '@/data/guidedScenario';
 
 // Demo context items for initial state
 const demoContextItems: ContextItem[] = [
@@ -48,6 +49,10 @@ const demoContextItems: ContextItem[] = [
   },
 ];
 
+interface UseContextHubOptions {
+  onGuidedContextTrigger?: () => void;
+}
+
 interface UseContextHubReturn {
   isOpen: boolean;
   openPanel: () => void;
@@ -58,11 +63,13 @@ interface UseContextHubReturn {
   updateContextItem: (id: string, updates: Partial<ContextItem>) => void;
   removeContextItem: (id: string) => void;
   convertToKnowledgeNode: (item: ContextItem) => KnowledgeNode;
+  guidedTriggered: boolean;
 }
 
-export function useContextHub(): UseContextHubReturn {
+export function useContextHub(options?: UseContextHubOptions): UseContextHubReturn {
   const [isOpen, setIsOpen] = useState(false);
   const [contextItems, setContextItems] = useState<ContextItem[]>(demoContextItems);
+  const [guidedTriggered, setGuidedTriggered] = useState(false);
 
   const openPanel = useCallback(() => setIsOpen(true), []);
   const closePanel = useCallback(() => setIsOpen(false), []);
@@ -83,9 +90,18 @@ export function useContextHub(): UseContextHubReturn {
         prev.map((i) => (i.id === newItem.id ? { ...i, status: 'processed' } : i))
       );
     }, 1500);
+
+    // Check for guided scenario trigger
+    if (!guidedTriggered && isGuidedTrigger(item.content)) {
+      setGuidedTriggered(true);
+      // Fire the guided context cascade after processing animation
+      setTimeout(() => {
+        options?.onGuidedContextTrigger?.();
+      }, 2000);
+    }
     
     return newItem;
-  }, []);
+  }, [guidedTriggered, options]);
 
   const updateContextItem = useCallback((id: string, updates: Partial<ContextItem>) => {
     setContextItems((prev) =>
@@ -119,5 +135,6 @@ export function useContextHub(): UseContextHubReturn {
     updateContextItem,
     removeContextItem,
     convertToKnowledgeNode,
+    guidedTriggered,
   };
 }
