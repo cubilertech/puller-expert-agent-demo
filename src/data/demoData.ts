@@ -21,15 +21,17 @@ function correctTaskStatus(task: Task): Task {
 
 // Get initial tasks for the default demo mode (milk-run with 3 tasks plus some processing tasks)
 export const initialTasks: Task[] = (() => {
+  // Get demo tasks but exclude retail-1 (hero task) — it will be injected later via simulation
   const demoTasks = getTasksForDemo('quick-demo')
+    .filter(t => t.id !== 'retail-1')
     .map(correctTaskStatus)
     .map(t => ({ ...t, originalId: t.id })); // Add originalId
   
   const demoTaskIds = new Set(demoTasks.map(t => t.id));
   
-  // Add additional tasks that aren't already in the demo set
+  // Add additional tasks that aren't already in the demo set (excluding retail-1)
   const additionalTasks = allIndustryTasks
-    .filter(t => !demoTaskIds.has(t.id))
+    .filter(t => !demoTaskIds.has(t.id) && t.id !== 'retail-1')
     .slice(0, 3)
     .map((task, idx) => ({
       ...task,

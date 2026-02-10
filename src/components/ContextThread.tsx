@@ -702,7 +702,7 @@ export function ContextThread({ messages, taskTitle, taskStatus, taskSource, req
   const renderMessage = (message: ChatMessage, index: number, isLastVisible: boolean, isLastMessage: boolean, isAgentMessage: boolean = false) => {
     const { icon: Icon, color, label } = senderConfig[message.sender];
     const hasAssumptions = message.assumptions && message.assumptions.length > 0;
-    const isExpanded = expandedAssumptions[message.id] ?? false;
+    const isExpanded = expandedAssumptions[message.id] ?? true;
     const isRevealed = revealedMessages.has(message.id);
     const shouldType = isAgentMessage && isLastVisible && !isRevealed;
     

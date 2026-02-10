@@ -10,7 +10,7 @@ const task1: Task = {
   id: 'retail-1',
   title: 'GlowMax Serum Weekly Sales Trend',
   requestor: 'Sarah Chen, Analytics Lead',
-  status: 'review',
+  status: 'ingesting',
   timestamp: new Date(Date.now() - 1000 * 60 * 8),
   priority: 'medium',
   description: 'How did sales of GlowMax Serum trend by day last week?',
