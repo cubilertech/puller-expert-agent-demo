@@ -10,16 +10,14 @@ const task1: Task = {
   id: 'retail-1',
   title: 'GlowMax Serum Weekly Sales Trend',
   requestor: 'Sarah Chen, Analytics Lead',
-  status: 'sent',
-  sentAt: new Date(Date.now() - 1000 * 60 * 2),
-  sentStatus: 'pending',
+  status: 'review',
   timestamp: new Date(Date.now() - 1000 * 60 * 8),
   priority: 'medium',
   description: 'How did sales of GlowMax Serum trend by day last week?',
   source: 'email',
   industry: 'retail-ecommerce',
   flags: { urgency: false, humanRequested: false, vip: false },
-  confidence: 92
+  confidence: 72
 };
 
 const task1Messages: ChatMessage[] = [
