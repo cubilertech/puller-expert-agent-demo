@@ -84,12 +84,12 @@ export function useContextHub(options?: UseContextHubOptions): UseContextHubRetu
     };
     setContextItems((prev) => [newItem, ...prev]);
     
-    // Simulate processing
+    // Simulate processing with longer duration for realism
     setTimeout(() => {
       setContextItems((prev) =>
         prev.map((i) => (i.id === newItem.id ? { ...i, status: 'processed' } : i))
       );
-    }, 1500);
+    }, 3000);
 
     // Check for guided scenario trigger
     if (!guidedTriggered && isGuidedTrigger(item.content)) {
@@ -97,7 +97,7 @@ export function useContextHub(options?: UseContextHubOptions): UseContextHubRetu
       // Fire the guided context cascade after processing animation
       setTimeout(() => {
         options?.onGuidedContextTrigger?.();
-      }, 2000);
+      }, 3500);
     }
     
     return newItem;
