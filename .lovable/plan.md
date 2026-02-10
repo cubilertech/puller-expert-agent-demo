@@ -1,258 +1,132 @@
 
 
-# Codebase Handover Preparation Plan
+# Guided Demo Storyline: Context-Driven Task Update
 
-## Executive Summary
+## Concept
 
-This plan outlines the cleanup, documentation, security review, and refactoring needed to prepare the **Puller AI Command Center** codebase for professional handover. The codebase is in good shape overall, but there are several areas that need attention before delivery.
+Create a single "golden path" demo scenario where a specific task arrives, Puller drafts a response, the user adds context via the Context Hub, and the artifact **visibly updates** to reflect the new context. This creates a compelling narrative: "the system learns and adapts in real-time."
+
+## The Story
+
+We'll use the existing **retail-1** task (GlowMax Serum Weekly Sales Trend) as the "hero" task, with a **before/after** data transformation:
+
+```text
+1. Task arrives: "How did GlowMax Serum trend last week?"
+2. Puller drafts response: Shows 6 days of data (Mon-Sat)
+3. User opens Context Hub, adds context:
+   "Our retail week runs Sunday through Saturday, not Monday through Sunday"
+4. System processes the new context (animated)
+5. Artifact UPDATES:
+   - SQL changes (date filter updated, highlighted as diff)
+   - Table data changes (Sunday row appears, new totals)
+   - Assumptions update (reflects new week definition)
+   - Response message updates with new insight
+   - Learning signal fires ("RETAIL_WEEK_DEFINITION" learned)
+```
+
+## Implementation Approach
+
+### 1. Guided Scenario Data (`src/data/guidedScenario.ts`)
+
+Define the "before" and "after" versions of the task data:
+
+| Element | Before (Current) | After (Context Applied) |
+|---------|------------------|------------------------|
+| SQL date filter | `'2025-01-06' AND '2025-01-12'` (Mon-Sun) | `'2025-01-05' AND '2025-01-11'` (Sun-Sat) |
+| Table data | 6 rows (Mon-Sat) | 7 rows (Sun-Sat), different totals |
+| Assumptions | "Last week = Monday-Sunday" | "Last week = Sunday-Saturday (per business rule)" |
+| Response message | Peak on Saturday | Updated insight with Sunday included |
+| SQL diff | All `unchanged` lines | Date line shown as `removed` + `added` |
+
+### 2. Canned Context Action
+
+Add a special "suggested context" prompt in the Context Hub chat that triggers the storyline:
+
+- In the example prompts list, include: **"Our retail week runs Sunday-Saturday"**
+- When this specific prompt is submitted, it triggers the guided scenario flow
+- The system recognizes this as the "golden path" context and fires the update cascade
+
+### 3. Update Cascade (in `Index.tsx`)
+
+When the guided context is added:
+
+1. **Context Log**: New item appears with "pending" shimmer animation
+2. **Processing**: 2-second animated processing state
+3. **Context processed**: Status changes to "processed"
+4. **Task data swaps**: The `allTaskData['retail-1']` entry is replaced with the "after" version
+5. **Artifact Editor re-renders**: SQL shows diff highlighting, table updates, assumptions refresh
+6. **Learning signal**: Toast fires with "RETAIL_WEEK_DEFINITION = SUN-SAT"
+7. **Knowledge Graph**: New node added for the retail week rule
+
+### 4. Visual Feedback in Artifact Editor
+
+When the update hits the Artifact Editor:
+
+- A brief "Context Update Applied" banner flashes at the top
+- The SQL view highlights the changed date filter line (red removed, green added)
+- The table smoothly transitions to show the new data
+- The assumption text updates with a subtle highlight animation
 
 ---
 
-## Current Codebase Assessment
+## Files to Create/Modify
 
-### Strengths
-- Well-organized component structure with clear separation of concerns
-- Consistent use of TypeScript throughout
-- Good use of shadcn/ui component library
-- Clean CSS architecture with CSS custom properties
-- No TODO/FIXME/HACK comments left in code
-- No `@ts-ignore` or `@ts-nocheck` suppressions
+### New File: `src/data/guidedScenario.ts`
+- Contains the "after" version of `retail-1` task data (updated SQL, table, assumptions, message)
+- Exports a function `getGuidedUpdate()` returning the updated `TaskData`
+- Contains the trigger phrase constant
 
-### Areas Requiring Attention
-- Security: Hardcoded demo credentials in Login.tsx
-- Code cleanup: Console.log statements present
-- Documentation: Missing README documentation for components
-- Type safety: Some loose typing patterns
-- Unused imports and components to audit
+### Modify: `src/hooks/useContextHub.ts`
+- Add a `onGuidedContextTrigger` callback parameter
+- Detect when the guided context phrase is submitted
+- Fire the callback to initiate the update cascade
+
+### Modify: `src/pages/Index.tsx`
+- Add `handleGuidedContext` function that:
+  - Swaps the task data for `retail-1` with the "after" version
+  - Triggers learning signal animation
+  - Adds knowledge node to graph
+- Pass this handler down through the Context Hub
+
+### Modify: `src/components/ArtifactEditor.tsx`
+- Add a "Context Update Applied" banner that shows briefly when data changes
+- Detect when props change and flash the update indicator
+
+### Modify: `src/components/inputs/ContextChat.tsx`
+- Add the guided prompt to the example list (already has 12, this becomes a special one)
 
 ---
 
-## Phase 1: Security Review
+## Technical Details
 
-### 1.1 Remove Hardcoded Credentials
-**File**: `src/pages/Login.tsx` (lines 22-26)
+### Trigger Detection
+The guided scenario activates when `addContextItem` receives content matching (case-insensitive) keywords like "retail week" + "sunday" or "sun-sat". This keeps it feeling natural rather than requiring an exact phrase.
+
+### Data Swap Mechanism
+Rather than mutating the global `allTaskData`, we'll use a local state override in `Index.tsx`:
 
 ```typescript
-// SECURITY ISSUE - Currently in code:
-const VALID_CREDENTIALS = {
-  email: "zac@puller.ai",
-  password: "123456"
-};
+const [taskDataOverrides, setTaskDataOverrides] = useState<Record<string, TaskData>>({});
+
+// When rendering, check overrides first
+const taskData = taskDataOverrides[taskDataId] || (taskDataId ? allTaskData[taskDataId] : null);
 ```
 
-**Action**: Either:
-- Remove entirely and add a note this is demo-only
-- Add prominent comment marking this as demo placeholder
-- Move to environment configuration for production
+This keeps the override contained and resets on demo refresh.
 
-### 1.2 Session Storage Security
-**File**: `src/hooks/useAuth.ts`
-
-Currently uses `sessionStorage` for auth state. This is acceptable for a demo but should be documented as not production-ready.
-
-**Action**: Add documentation comment noting this is demo auth only.
-
----
-
-## Phase 2: Code Cleanup
-
-### 2.1 Remove Console Statements
-**File**: `src/pages/Index.tsx` (line 216)
-```typescript
-console.log('Override requested');
-```
-**Action**: Remove or replace with proper logging utility.
-
-**File**: `src/pages/NotFound.tsx` (line 8)
-```typescript
-console.error("404 Error: User attempted to access...");
-```
-**Action**: This is intentional error logging - can remain but should use a logging utility in production.
-
-### 2.2 Unused Component Audit
-Review and document or remove:
-- `src/components/NavLink.tsx` - Check if used
-- `src/components/FlyingArtifact.tsx` - Verify still needed
-- `src/components/ContextGraph.tsx` vs `ContextGraphCanvas.tsx` - Clarify purpose
-
-### 2.3 Import Cleanup
-Run through components and remove any unused imports (automated via linting).
-
----
-
-## Phase 3: Documentation
-
-### 3.1 Update README.md
-Replace default Lovable README with project-specific documentation:
-
-```markdown
-# Puller AI Command Center
-
-## Overview
-Expert-in-the-Loop AI system for data analytics task management.
-
-## Features
-- Real-time task pipeline with 6-stage processing
-- Interactive artifact editor with SQL annotations
-- Context Graph knowledge visualization
-- Context Hub for knowledge management
-- Multi-industry demo data (6 verticals, 30 scenarios)
-
-## Tech Stack
-- React 18 + TypeScript
-- Vite build system
-- Tailwind CSS + shadcn/ui
-- Framer Motion animations
-- React Query for state management
-
-## Getting Started
-npm install
-npm run dev
-
-## Demo Credentials
-Email: zac@puller.ai
-Password: 123456
-
-## Project Structure
-src/
-├── components/     # UI components
-│   ├── ui/        # shadcn/ui primitives
-│   └── inputs/    # Context Hub input components
-├── data/          # Demo data and industry configs
-├── hooks/         # Custom React hooks
-├── pages/         # Route pages
-├── types/         # TypeScript definitions
-└── lib/           # Utilities
+### Update Animation Timing
+```text
+0ms    - Context item added to log (pending)
+500ms  - Processing shimmer starts
+1500ms - Context marked as "processed"
+2000ms - Task data override applied
+2200ms - "Context Update Applied" banner appears in Artifact Editor
+2500ms - SQL diff highlights visible
+3000ms - Learning signal toast fires
+3500ms - Knowledge node added to graph
+5000ms - Banner fades, update complete
 ```
 
-### 3.2 Add Component Documentation
-Create `COMPONENTS.md` documenting:
-- Component hierarchy
-- Props interfaces
-- Usage examples for key components
-
-### 3.3 Add Architecture Diagram
-Document the data flow between:
-- Task simulation system
-- Context Hub
-- Knowledge Graph
-- Artifact Editor
-
----
-
-## Phase 4: Code Improvements
-
-### 4.1 Type Safety Improvements
-Review large component files for type tightening:
-- `ArtifactEditor.tsx` (1092 lines) - Consider splitting
-- `ContextThread.tsx` (1188 lines) - Consider splitting
-
-### 4.2 Component Size Refactoring
-**Recommendation**: Split large components:
-
-| Component | Lines | Recommendation |
-|-----------|-------|----------------|
-| ArtifactEditor.tsx | 1092 | Split into MessageEditor, AssumptionPanel, SqlViewer, CommentSystem |
-| ContextThread.tsx | 1188 | Split into ThinkingSteps, MessageBubble, ResultDisplay |
-| TaskFeed.tsx | 405 | Acceptable but could extract TaskItem |
-
-### 4.3 Constants Extraction
-Move magic numbers to constants file:
-
-```typescript
-// src/constants/simulation.ts
-export const SIMULATION_CONFIG = {
-  WAIT_PERIOD_MS: 15000,
-  INJECT_INTERVAL_MIN_MS: 4000,
-  INJECT_INTERVAL_MAX_MS: 8000,
-  STAGE_TIME_MIN_MS: 500,
-  STAGE_TIME_MAX_MS: 1500,
-};
-```
-
----
-
-## Phase 5: Package & Build Optimization
-
-### 5.1 Package.json Cleanup
-Current state is clean - 29 dependencies, all actively used.
-
-**Verify these are needed**:
-- `next-themes` - Check if dark mode toggle exists
-- `recharts` - Check if charts are implemented
-- `react-day-picker` / `calendar` - Check if date pickers used
-
-### 5.2 Update Project Metadata
-```json
-{
-  "name": "puller-command-center",
-  "version": "1.0.0",
-  "description": "Expert-in-the-Loop AI Command Center for Puller AI",
-  "author": "Puller AI",
-  "license": "UNLICENSED"
-}
-```
-
----
-
-## Phase 6: Production Readiness Checklist
-
-### Files to Create
-
-| File | Purpose |
-|------|---------|
-| `README.md` | Updated project documentation |
-| `CHANGELOG.md` | Version history |
-| `ARCHITECTURE.md` | System design documentation |
-| `.env.example` | Environment variable template |
-
-### Pre-Handover Checklist
-
-- [ ] Remove hardcoded credentials or add demo disclaimer
-- [ ] Remove console.log statements
-- [ ] Verify all routes work correctly
-- [ ] Test login/logout flow
-- [ ] Test Context Hub panel functionality
-- [ ] Verify responsive design on mobile
-- [ ] Run TypeScript type check (`tsc --noEmit`)
-- [ ] Run ESLint check
-- [ ] Verify production build works (`npm run build`)
-
----
-
-## Implementation Order
-
-| Priority | Task | Effort |
-|----------|------|--------|
-| 1 | Security: Add demo disclaimer to credentials | 10 min |
-| 2 | Remove console.log statements | 5 min |
-| 3 | Update README.md with project docs | 30 min |
-| 4 | Update package.json metadata | 5 min |
-| 5 | Create ARCHITECTURE.md | 45 min |
-| 6 | Audit unused components | 20 min |
-| 7 | Split large components (optional) | 2-3 hours |
-
----
-
-## Deliverables for Handover
-
-1. **Clean Codebase**
-   - No debug statements
-   - Security disclaimer on demo auth
-   - Consistent code formatting
-
-2. **Documentation Package**
-   - Updated README.md
-   - ARCHITECTURE.md
-   - COMPONENTS.md (optional)
-
-3. **Build Verification**
-   - Successful production build
-   - No TypeScript errors
-   - No ESLint warnings
-
-4. **Demo Instructions**
-   - Login credentials
-   - Feature walkthrough guide
-   - Known limitations
+### Demo Reset
+The existing `handleRefreshDemo` function will also clear `taskDataOverrides`, resetting the guided scenario so it can be replayed.
 
