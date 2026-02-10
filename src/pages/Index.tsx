@@ -10,8 +10,9 @@ import { ContextHubPanel } from '@/components/ContextHubPanel';
 import { useSimulation } from '@/hooks/useSimulation';
 import { useAuth } from '@/hooks/useAuth';
 import { useContextHub } from '@/hooks/useContextHub';
-import { Task, KnowledgeNode, LearningSignal, ChatMessage } from '@/types';
+import { Task, KnowledgeNode, LearningSignal, ChatMessage, TaskData } from '@/types';
 import { initialTasks, initialKnowledgeNodes, allTaskData, originalCode, originalCodeAnnotations } from '@/data/demoData';
+import { getGuidedScenarioUpdate, GUIDED_TRIGGER_TASK_ID } from '@/data/guidedScenario';
 
 // Helper to generate dynamic messages for tasks without predefined data
 function generateTaskMessages(task: Task): ChatMessage[] {
@@ -48,9 +49,48 @@ export default function Index() {
       navigate('/login');
     }
   }, [navigate]);
+
+  // Task data overrides for guided scenario
+  const [taskDataOverrides, setTaskDataOverrides] = useState<Record<string, TaskData>>({});
+
+  // Guided scenario handler
+  const handleGuidedContextTrigger = useCallback(() => {
+    const updatedData = getGuidedScenarioUpdate();
+    setTaskDataOverrides((prev) => ({ ...prev, [GUIDED_TRIGGER_TASK_ID]: updatedData }));
+
+    // Select the hero task so the user sees the update
+    setSelectedTaskId((current) => {
+      // Find actual task id (may be recycled with different instance id)
+      const heroTask = tasks.find(t => (t.originalId || t.id) === GUIDED_TRIGGER_TASK_ID);
+      return heroTask ? heroTask.id : current;
+    });
+
+    // Trigger learning signal
+    setTimeout(() => {
+      setIsLearning(true);
+      const newNode: KnowledgeNode = {
+        id: `node-guided-${Date.now()}`,
+        label: 'Retail Week = Sun-Sat',
+        type: 'rule',
+        x: 180,
+        y: 300,
+        isNew: true,
+        connections: ['node-3', 'node-4'],
+      };
+      setKnowledgeNodes((prev) => [...prev, newNode]);
+      setApprovedCount((prev) => prev + 1);
+      setLearningSignal({
+        id: `signal-guided-${Date.now()}`,
+        rule: 'RETAIL_WEEK_DEFINITION',
+        value: 'SUN-SAT',
+        timestamp: new Date(),
+      });
+      setTimeout(() => setIsLearning(false), 2000);
+    }, 500);
+  }, []);
   
   // Context Hub state management
-  const { isOpen: isContextHubOpen, openPanel: openContextHub, closePanel: closeContextHub, contextItems, addContextItem, convertToKnowledgeNode } = useContextHub();
+  const { isOpen: isContextHubOpen, openPanel: openContextHub, closePanel: closeContextHub, contextItems, addContextItem, convertToKnowledgeNode } = useContextHub({ onGuidedContextTrigger: handleGuidedContextTrigger });
   
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialTasks[0]?.id || null);
@@ -134,11 +174,12 @@ export default function Index() {
     setShowFlyingArtifact(false);
     setIsLearning(false);
     setLearningSignal(null);
+    setTaskDataOverrides({});
   }, []);
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
   const taskDataId = selectedTask?.originalId || selectedTaskId;
-  const taskData = taskDataId ? allTaskData[taskDataId] : null;
+  const taskData = taskDataId ? (taskDataOverrides[taskDataId] || allTaskData[taskDataId]) : null;
   
   // Generate dynamic messages for the selected task
   const taskMessages = useMemo(() => {

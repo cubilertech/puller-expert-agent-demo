@@ -102,15 +102,27 @@ export function ArtifactEditor({
   const [queryCode, setQueryCode] = useState(() => 
     code.filter(line => line.type !== 'removed').map(line => line.content).join('\n')
   );
+  const [showContextBanner, setShowContextBanner] = useState(false);
+  const prevCodeRef = useRef<string>(JSON.stringify(code));
   
   // Reset state when task data changes
   useEffect(() => {
+    const codeKey = JSON.stringify(code);
+    const wasUpdate = prevCodeRef.current !== codeKey && prevCodeRef.current !== JSON.stringify([]);
+    prevCodeRef.current = codeKey;
+
     setAssumptions(initialAssumptions || defaultAssumptions);
     setMessage(initialMessage || defaultMessage);
     setQueryCode(code.filter(line => line.type !== 'removed').map(line => line.content).join('\n'));
     setIsEditingMessage(false);
     setIsEditingQuery(false);
     setHasEditedQuery(false);
+
+    // Show context update banner if this was a live data swap (not initial load)
+    if (wasUpdate && code.some(l => l.type === 'added' || l.type === 'removed')) {
+      setShowContextBanner(true);
+      setTimeout(() => setShowContextBanner(false), 4000);
+    }
   }, [initialAssumptions, initialMessage, code]);
   const [assumptionsExpanded, setAssumptionsExpanded] = useState(true);
   const [messageExpanded, setMessageExpanded] = useState(true);
@@ -375,6 +387,28 @@ export function ArtifactEditor({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Context Update Applied Banner */}
+      <AnimatePresence>
+        {showContextBanner && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-3 py-2 bg-primary/15 border-b border-primary/30 flex items-center gap-2 flex-shrink-0"
+          >
+            <motion.div
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 0.6 }}
+            >
+              <RefreshCw className="w-4 h-4 text-primary flex-shrink-0" />
+            </motion.div>
+            <span className="text-xs text-primary font-medium">
+              Context Update Applied — artifact re-generated with new business rules
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Expert Note */}
       {hasChanges && (

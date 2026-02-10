@@ -22,6 +22,7 @@ const examplePrompts = [
   { text: 'Warehouse codes: NYC=01, LA=02, CHI=03', type: 'entity' as const },
   { text: 'Weekend orders ship Monday', type: 'rule' as const },
   { text: 'Customer segments: SMB, Mid-Market, Enterprise', type: 'entity' as const },
+  { text: 'Our retail week runs Sunday-Saturday', type: 'rule' as const, isGuided: true },
 ];
 
 const typeOptions: { value: ContextItemType; label: string; color: string }[] = [
@@ -72,8 +73,14 @@ export function ContextChat({ onSubmit }: ContextChatProps) {
               <button
                 key={i}
                 onClick={() => handleExampleClick(example)}
-                className="text-xs px-2 py-1 rounded-full border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                className={cn(
+                  "text-xs px-2 py-1 rounded-full border transition-colors",
+                  (example as any).isGuided
+                    ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 font-medium"
+                    : "border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
               >
+                {(example as any).isGuided && '✨ '}
                 {example.text.length > 30 ? example.text.slice(0, 30) + '...' : example.text}
               </button>
             ))}
