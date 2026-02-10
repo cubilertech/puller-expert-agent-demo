@@ -29,6 +29,7 @@ interface ArtifactEditorProps {
   tableData?: Record<string, string | number>[];
   initialAssumptions?: AssumptionType[];
   initialMessage?: string;
+  onCommentAdded?: (comment: { selection: string; text: string; section: string }) => void;
 }
 
 interface Assumption {
@@ -90,7 +91,8 @@ export function ArtifactEditor({
   tableColumns = defaultTableColumns,
   tableData = defaultTableData,
   initialAssumptions,
-  initialMessage
+  initialMessage,
+  onCommentAdded
 }: ArtifactEditorProps) {
   const [showDiff, setShowDiff] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -219,6 +221,9 @@ export function ArtifactEditor({
       
       // Trigger micro-learning
       triggerMicroLearning('comment');
+      
+      // Notify parent about the comment
+      onCommentAdded?.({ selection: selectedText, text: newComment.trim(), section: activeCommentSection });
     }
   };
 
