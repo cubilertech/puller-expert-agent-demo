@@ -32,6 +32,7 @@ export function useSimulation(
   // Track which tasks from the pool have been used
   const usedTaskIdsRef = useRef<Set<string>>(new Set());
   const taskPoolIndexRef = useRef(0);
+  const injectCountRef = useRef(0); // Track injection count for hero task scheduling
 
   // Track per-task stage entry times and durations
   const taskStageTimersRef = useRef<Map<string, { enteredAt: number; duration: number }>>(new Map());
@@ -132,6 +133,8 @@ export function useSimulation(
   // Inject new tasks from the pool into the queue
   const injectNewTask = useCallback(() => {
     setTasks((prev) => {
+      injectCountRef.current++;
+      
       // Define which statuses block recycling
       const incomingStatuses: TaskStatus[] = [...processingStages, 'review'];
       const activeStatuses: TaskStatus[] = ['sent'];
@@ -142,20 +145,35 @@ export function useSimulation(
           .filter(t => [...incomingStatuses, ...activeStatuses].includes(t.status))
           .map(t => {
             if (t.originalId) return t.originalId;
-            // For initial tasks without originalId, extract template ID
-            // Handle both 'retail-1' (initial) and 'retail-1-1737123456789' (recycled) formats
             const parts = t.id.split('-');
-            // If last part looks like a timestamp (13+ digits), remove it
             if (parts.length > 2 && parts[parts.length - 1].length >= 13) {
               return parts.slice(0, -1).join('-');
             }
-            return t.id; // Return full ID for initial tasks like 'retail-1'
+            return t.id;
           })
       );
 
-      // Find available tasks: not used in current cycle AND not blocked
+      // On the 5th injection, force the hero task (retail-1)
+      if (injectCountRef.current === 5) {
+        const heroTemplate = allIndustryTasks.find(t => t.id === 'retail-1');
+        if (heroTemplate && !blockedOriginalIds.has('retail-1')) {
+          usedTaskIdsRef.current.add('retail-1');
+          const newTask: Task = {
+            ...heroTemplate,
+            id: `retail-1-${Date.now()}`,
+            originalId: 'retail-1',
+            status: 'ingesting' as TaskStatus,
+            timestamp: new Date(),
+            sentAt: undefined,
+            sentStatus: undefined
+          };
+          return [...prev, newTask];
+        }
+      }
+
+      // Find available tasks: not used in current cycle AND not blocked, exclude retail-1 (scheduled separately)
       let availableTasks = allIndustryTasks.filter(
-        t => !usedTaskIdsRef.current.has(t.id) && !blockedOriginalIds.has(t.id)
+        t => t.id !== 'retail-1' && !usedTaskIdsRef.current.has(t.id) && !blockedOriginalIds.has(t.id)
       );
 
       // If all tasks used in cycle, start new cycle
@@ -163,10 +181,8 @@ export function useSimulation(
         usedTaskIdsRef.current.clear();
         taskPoolIndexRef.current = 0;
         
-        // Re-filter excluding blocked tasks
-        availableTasks = allIndustryTasks.filter(t => !blockedOriginalIds.has(t.id));
+        availableTasks = allIndustryTasks.filter(t => t.id !== 'retail-1' && !blockedOriginalIds.has(t.id));
         
-        // If all 30 tasks are in incoming/active, wait
         if (availableTasks.length === 0) {
           return prev;
         }
@@ -176,10 +192,8 @@ export function useSimulation(
       const nextTask = availableTasks[taskPoolIndexRef.current % availableTasks.length];
       taskPoolIndexRef.current++;
       
-      // Mark as used in this cycle
       usedTaskIdsRef.current.add(nextTask.id);
 
-      // Create new instance with unique ID
       const newTask: Task = {
         ...nextTask,
         id: `${nextTask.id}-${Date.now()}`,
