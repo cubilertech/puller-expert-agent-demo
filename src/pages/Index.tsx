@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useContextHub } from '@/hooks/useContextHub';
 import { Task, KnowledgeNode, LearningSignal, ChatMessage, TaskData } from '@/types';
 import { initialTasks, initialKnowledgeNodes, allTaskData, originalCode, originalCodeAnnotations } from '@/data/demoData';
-import { getGuidedScenarioUpdate, GUIDED_TRIGGER_TASK_ID } from '@/data/guidedScenario';
+import { getGuidedScenarioUpdate, GUIDED_TRIGGER_TASK_ID, isGuidedTrigger } from '@/data/guidedScenario';
 
 // Helper to generate dynamic messages for tasks without predefined data
 function generateTaskMessages(task: Task): ChatMessage[] {
@@ -358,6 +358,12 @@ export default function Index() {
                     requestor={selectedTask.requestor}
                     onArtifactsReady={() => setArtifactsReady(true)}
                     onCommentAdded={(comment) => {
+                      // Check if comment triggers the guided scenario (weekday context update)
+                      const commentText = `${comment.quotedText} ${comment.comment}`;
+                      if (isGuidedTrigger(commentText)) {
+                        handleGuidedContextTrigger();
+                      }
+                      
                       // Add a new knowledge node from the comment
                       const newNode: KnowledgeNode = {
                         id: `node-${Date.now()}`,
