@@ -1,132 +1,132 @@
 
 
-# Guided Demo Storyline: Context-Driven Task Update
+# Plan: Prepare for Real API Integration (Custom REST API)
 
-## Concept
+## Overview
 
-Create a single "golden path" demo scenario where a specific task arrives, Puller drafts a response, the user adds context via the Context Hub, and the artifact **visibly updates** to reflect the new context. This creates a compelling narrative: "the system learns and adapts in real-time."
+Introduce an API service layer that abstracts all data fetching behind clean interfaces. The app currently uses hardcoded demo data, simulated auth, and in-memory state. This plan creates a clean separation so you can swap in real API endpoints without touching UI components.
 
-## The Story
-
-We'll use the existing **retail-1** task (GlowMax Serum Weekly Sales Trend) as the "hero" task, with a **before/after** data transformation:
+## Architecture
 
 ```text
-1. Task arrives: "How did GlowMax Serum trend last week?"
-2. Puller drafts response: Shows 6 days of data (Mon-Sat)
-3. User opens Context Hub, adds context:
-   "Our retail week runs Sunday through Saturday, not Monday through Sunday"
-4. System processes the new context (animated)
-5. Artifact UPDATES:
-   - SQL changes (date filter updated, highlighted as diff)
-   - Table data changes (Sunday row appears, new totals)
-   - Assumptions update (reflects new week definition)
-   - Response message updates with new insight
-   - Learning signal fires ("RETAIL_WEEK_DEFINITION" learned)
+┌─────────────────────────────────────────────────┐
+│                  UI Components                   │
+│  (TaskFeed, ContextThread, ArtifactEditor, etc.) │
+└──────────────────────┬──────────────────────────┘
+                       │
+         ┌─────────────▼──────────────┐
+         │   React Query Hooks        │
+         │   src/hooks/api/           │
+         │   - useTasks.ts            │
+         │   - useTaskData.ts         │
+         │   - useAuth.ts (updated)   │
+         │   - useContextItems.ts     │
+         └─────────────┬──────────────┘
+                       │
+         ┌─────────────▼──────────────┐
+         │   API Service Layer        │
+         │   src/services/api/        │
+         │   - client.ts  (fetch wrapper)
+         │   - authApi.ts             │
+         │   - tasksApi.ts            │
+         │   - contextApi.ts          │
+         │   - types.ts (API DTOs)    │
+         └─────────────┬──────────────┘
+                       │
+         ┌─────────────▼──────────────┐
+         │   Config                   │
+         │   src/config/api.ts        │
+         │   - BASE_URL, USE_MOCK     │
+         └────────────────────────────┘
 ```
 
-## Implementation Approach
+## Files to Create
 
-### 1. Guided Scenario Data (`src/data/guidedScenario.ts`)
+### 1. `src/config/api.ts` — API Configuration
+- Exports `API_BASE_URL` from `import.meta.env.VITE_API_BASE_URL` with fallback to `""`.
+- Exports `USE_MOCK_DATA` flag (`import.meta.env.VITE_USE_MOCK_DATA !== 'false'`) — defaults to `true` so the app keeps working with demo data until a real backend is connected.
 
-Define the "before" and "after" versions of the task data:
+### 2. `src/services/api/client.ts` — HTTP Client
+- A thin `apiClient` wrapper around `fetch` that:
+  - Prepends `API_BASE_URL`
+  - Attaches `Authorization: Bearer <token>` from stored auth token
+  - Sets `Content-Type: application/json`
+  - Handles response parsing and error normalization
+  - Exports typed `get`, `post`, `put`, `delete` methods
 
-| Element | Before (Current) | After (Context Applied) |
-|---------|------------------|------------------------|
-| SQL date filter | `'2025-01-06' AND '2025-01-12'` (Mon-Sun) | `'2025-01-05' AND '2025-01-11'` (Sun-Sat) |
-| Table data | 6 rows (Mon-Sat) | 7 rows (Sun-Sat), different totals |
-| Assumptions | "Last week = Monday-Sunday" | "Last week = Sunday-Saturday (per business rule)" |
-| Response message | Peak on Saturday | Updated insight with Sunday included |
-| SQL diff | All `unchanged` lines | Date line shown as `removed` + `added` |
+### 3. `src/services/api/types.ts` — API DTOs
+- Request/response type definitions that map to the backend contract (separate from internal UI types).
+- Includes: `LoginRequest`, `LoginResponse`, `TaskListResponse`, `TaskDetailResponse`, `ContextItemRequest`, `ContextItemResponse`, etc.
 
-### 2. Canned Context Action
+### 4. `src/services/api/authApi.ts` — Auth Service
+- `login(email, password)` → POST `/auth/login` → returns `{ token, user }`
+- `logout()` → POST `/auth/logout`
+- `getSession()` → GET `/auth/session`
+- When `USE_MOCK_DATA` is true, returns hardcoded demo credentials logic (current behavior).
 
-Add a special "suggested context" prompt in the Context Hub chat that triggers the storyline:
+### 5. `src/services/api/tasksApi.ts` — Tasks Service
+- `fetchTasks()` → GET `/tasks`
+- `fetchTaskById(id)` → GET `/tasks/:id` (returns task data with messages, code, annotations)
+- `updateTaskStatus(id, status)` → PATCH `/tasks/:id/status`
+- `sendToRequestor(id, message, assumptions)` → POST `/tasks/:id/send`
+- When `USE_MOCK_DATA` is true, returns current demo data.
 
-- In the example prompts list, include: **"Our retail week runs Sunday-Saturday"**
-- When this specific prompt is submitted, it triggers the guided scenario flow
-- The system recognizes this as the "golden path" context and fires the update cascade
+### 6. `src/services/api/contextApi.ts` — Context Hub Service
+- `fetchContextItems()` → GET `/context`
+- `addContextItem(item)` → POST `/context`
+- `deleteContextItem(id)` → DELETE `/context/:id`
+- `connectApi(config)` → POST `/context/connect`
+- When `USE_MOCK_DATA` is true, returns current demo items.
 
-### 3. Update Cascade (in `Index.tsx`)
+### 7. `src/services/api/index.ts` — Barrel export
 
-When the guided context is added:
+## Files to Create (React Query Hooks)
 
-1. **Context Log**: New item appears with "pending" shimmer animation
-2. **Processing**: 2-second animated processing state
-3. **Context processed**: Status changes to "processed"
-4. **Task data swaps**: The `allTaskData['retail-1']` entry is replaced with the "after" version
-5. **Artifact Editor re-renders**: SQL shows diff highlighting, table updates, assumptions refresh
-6. **Learning signal**: Toast fires with "RETAIL_WEEK_DEFINITION = SUN-SAT"
-7. **Knowledge Graph**: New node added for the retail week rule
+### 8. `src/hooks/api/useTasks.ts`
+- `useTasksQuery()` — wraps `fetchTasks` with React Query, returns `{ data, isLoading, error }`
+- `useTaskDataQuery(taskId)` — wraps `fetchTaskById`
+- `useSendToRequestorMutation()` — wraps `sendToRequestor`
+- When mock mode is on, returns current state from demo data instead of fetching.
 
-### 4. Visual Feedback in Artifact Editor
+### 9. `src/hooks/api/useContextItemsQuery.ts`
+- `useContextItemsQuery()` — wraps `fetchContextItems`
+- `useAddContextMutation()` — wraps `addContextItem`
 
-When the update hits the Artifact Editor:
+### 10. `src/hooks/api/index.ts` — Barrel export
 
-- A brief "Context Update Applied" banner flashes at the top
-- The SQL view highlights the changed date filter line (red removed, green added)
-- The table smoothly transitions to show the new data
-- The assumption text updates with a subtle highlight animation
+## Files to Modify
 
----
+### 11. `src/hooks/useAuth.ts`
+- Replace `sessionStorage` calls with `authApi.login()` / `authApi.logout()`.
+- Store token from API response; attach to subsequent requests via the client.
+- Keep backward-compatible interface (`isAuthenticated`, `userEmail`, `logout`, `requireAuth`).
 
-## Files to Create/Modify
+### 12. `src/pages/Login.tsx`
+- Replace inline credential check with `authApi.login(email, password)`.
+- On success, store the returned token (used by `client.ts`).
 
-### New File: `src/data/guidedScenario.ts`
-- Contains the "after" version of `retail-1` task data (updated SQL, table, assumptions, message)
-- Exports a function `getGuidedUpdate()` returning the updated `TaskData`
-- Contains the trigger phrase constant
+### 13. `src/pages/Index.tsx`
+- No changes initially. The simulation hook and demo data continue to work in mock mode.
+- Add a comment/TODO showing where to swap `initialTasks` with `useTasksQuery()` when ready.
 
-### Modify: `src/hooks/useContextHub.ts`
-- Add a `onGuidedContextTrigger` callback parameter
-- Detect when the guided context phrase is submitted
-- Fire the callback to initiate the update cascade
+### 14. `src/hooks/useContextHub.ts`
+- Add conditional: if `!USE_MOCK_DATA`, call `contextApi` methods instead of managing local state.
+- Keep existing demo behavior as the default.
 
-### Modify: `src/pages/Index.tsx`
-- Add `handleGuidedContext` function that:
-  - Swaps the task data for `retail-1` with the "after" version
-  - Triggers learning signal animation
-  - Adds knowledge node to graph
-- Pass this handler down through the Context Hub
+## Environment Variables
 
-### Modify: `src/components/ArtifactEditor.tsx`
-- Add a "Context Update Applied" banner that shows briefly when data changes
-- Detect when props change and flash the update indicator
+Add to project (via `.env` or Lovable secrets when connected to Cloud):
 
-### Modify: `src/components/inputs/ContextChat.tsx`
-- Add the guided prompt to the example list (already has 12, this becomes a special one)
-
----
+```
+VITE_API_BASE_URL=https://your-api.example.com
+VITE_USE_MOCK_DATA=true
+```
 
 ## Technical Details
 
-### Trigger Detection
-The guided scenario activates when `addContextItem` receives content matching (case-insensitive) keywords like "retail week" + "sunday" or "sun-sat". This keeps it feeling natural rather than requiring an exact phrase.
-
-### Data Swap Mechanism
-Rather than mutating the global `allTaskData`, we'll use a local state override in `Index.tsx`:
-
-```typescript
-const [taskDataOverrides, setTaskDataOverrides] = useState<Record<string, TaskData>>({});
-
-// When rendering, check overrides first
-const taskData = taskDataOverrides[taskDataId] || (taskDataId ? allTaskData[taskDataId] : null);
-```
-
-This keeps the override contained and resets on demo refresh.
-
-### Update Animation Timing
-```text
-0ms    - Context item added to log (pending)
-500ms  - Processing shimmer starts
-1500ms - Context marked as "processed"
-2000ms - Task data override applied
-2200ms - "Context Update Applied" banner appears in Artifact Editor
-2500ms - SQL diff highlights visible
-3000ms - Learning signal toast fires
-3500ms - Knowledge node added to graph
-5000ms - Banner fades, update complete
-```
-
-### Demo Reset
-The existing `handleRefreshDemo` function will also clear `taskDataOverrides`, resetting the guided scenario so it can be replayed.
+- **Zero breaking changes**: The `USE_MOCK_DATA` flag defaults to `true`, so the app works identically until a real backend URL is configured.
+- **React Query** is already installed — used for caching, refetching, and loading/error states.
+- **Token storage**: Use `localStorage` for the JWT token (read by `client.ts` on every request). The auth hook clears it on logout.
+- **API error handling**: The client normalizes errors into `{ status, message }` objects that hooks can surface via toast notifications.
+- **Type mapping**: API DTOs are converted to internal types (e.g., `Task`, `ContextItem`) at the service layer boundary, keeping UI components unchanged.
 
