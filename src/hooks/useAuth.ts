@@ -1,18 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authApi } from '@/services/api';
 
- /**
-  * ⚠️ DEMO AUTHENTICATION HOOK
-  * 
-  * This hook provides simple session-based authentication for demo purposes only.
-  * It uses sessionStorage which is NOT secure for production applications.
-  * 
-  * For production, implement:
-  * - Secure token-based authentication (JWT)
-  * - HTTP-only cookies for session management
-  * - Proper backend authentication service
-  * - Secure logout with token invalidation
-  */
+/**
+ * Authentication hook
+ * 
+ * Uses authApi service which transparently handles both mock (demo)
+ * and real API modes based on USE_MOCK_DATA config flag.
+ */
 interface AuthState {
   isAuthenticated: boolean;
   userEmail: string | null;
@@ -21,26 +16,26 @@ interface AuthState {
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
-    userEmail: null
+    userEmail: null,
   });
   const navigate = useNavigate();
 
-  // Check auth state on mount
+  // Check auth state on mount via the API service
   useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
-    const userEmail = sessionStorage.getItem('userEmail');
-    setAuthState({ isAuthenticated, userEmail });
+    authApi.getSession().then((session) => {
+      setAuthState({
+        isAuthenticated: session.authenticated,
+        userEmail: session.user?.email ?? null,
+      });
+    });
   }, []);
 
-  // Logout function
-  const logout = useCallback(() => {
-    sessionStorage.removeItem('isAuthenticated');
-    sessionStorage.removeItem('userEmail');
+  const logout = useCallback(async () => {
+    await authApi.logout();
     setAuthState({ isAuthenticated: false, userEmail: null });
     navigate('/login');
   }, [navigate]);
 
-  // Require auth - redirect if not authenticated
   const requireAuth = useCallback(() => {
     const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
     if (!isAuthenticated) {
@@ -53,6 +48,6 @@ export function useAuth() {
   return {
     ...authState,
     logout,
-    requireAuth
+    requireAuth,
   };
 }
