@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { authApi } from '@/services/api';
 import pullerLogo from '@/assets/puller-logo.png';
 
 // Validation schema
@@ -19,21 +20,7 @@ const loginSchema = z.object({
   })
 });
 
- /**
-  * ⚠️ DEMO CREDENTIALS ONLY
-  * 
-  * These hardcoded credentials are for demonstration purposes only.
-  * In a production environment, authentication should be handled via:
-  * - A secure backend authentication service (e.g., Supabase Auth, Auth0)
-  * - Proper password hashing and secure token management
-  * - Environment-based configuration
-  * 
-  * DO NOT use hardcoded credentials in production applications.
-  */
- const DEMO_CREDENTIALS = {
-   email: "zac@puller.ai",
-   password: "123456"
- };
+// Credentials are now handled by authApi service (mock or real)
 export default function Login() {
   const navigate = useNavigate();
   const {
@@ -72,26 +59,18 @@ export default function Login() {
       return;
     }
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Check credentials
-     if (email.toLowerCase() === DEMO_CREDENTIALS.email && password === DEMO_CREDENTIALS.password) {
-      // Store auth state
-      sessionStorage.setItem('isAuthenticated', 'true');
-      sessionStorage.setItem('userEmail', email);
+    try {
+      await authApi.login(email, password);
       toast({
         title: "Welcome back!",
         description: "Redirecting to Command Center..."
       });
-
-      // Navigate to command center
       setTimeout(() => {
         navigate('/');
       }, 500);
-    } else {
+    } catch (err: any) {
       setErrors({
-        general: "Invalid email or password. Please try again."
+        general: err?.message || "Invalid email or password. Please try again."
       });
       setIsLoading(false);
     }

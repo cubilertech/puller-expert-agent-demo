@@ -12,6 +12,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useContextHub } from '@/hooks/useContextHub';
 import { Task, KnowledgeNode, LearningSignal, ChatMessage, TaskData } from '@/types';
 import { initialTasks, initialKnowledgeNodes, allTaskData, originalCode, originalCodeAnnotations } from '@/data/demoData';
+// TODO: When USE_MOCK_DATA is false, replace initialTasks with useTasksQuery() from '@/hooks/api'
+// import { useTasksQuery } from '@/hooks/api';
 import { getGuidedScenarioUpdate, GUIDED_TRIGGER_TASK_ID, isGuidedTrigger } from '@/data/guidedScenario';
 
 // Helper to generate dynamic messages for tasks without predefined data
