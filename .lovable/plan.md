@@ -1,132 +1,69 @@
 
 
-# Plan: Prepare for Real API Integration (Custom REST API)
+# Plan: Create API Documentation and Backend Developer Handoff Document
 
 ## Overview
 
-Introduce an API service layer that abstracts all data fetching behind clean interfaces. The app currently uses hardcoded demo data, simulated auth, and in-memory state. This plan creates a clean separation so you can swap in real API endpoints without touching UI components.
-
-## Architecture
-
-```text
-┌─────────────────────────────────────────────────┐
-│                  UI Components                   │
-│  (TaskFeed, ContextThread, ArtifactEditor, etc.) │
-└──────────────────────┬──────────────────────────┘
-                       │
-         ┌─────────────▼──────────────┐
-         │   React Query Hooks        │
-         │   src/hooks/api/           │
-         │   - useTasks.ts            │
-         │   - useTaskData.ts         │
-         │   - useAuth.ts (updated)   │
-         │   - useContextItems.ts     │
-         └─────────────┬──────────────┘
-                       │
-         ┌─────────────▼──────────────┐
-         │   API Service Layer        │
-         │   src/services/api/        │
-         │   - client.ts  (fetch wrapper)
-         │   - authApi.ts             │
-         │   - tasksApi.ts            │
-         │   - contextApi.ts          │
-         │   - types.ts (API DTOs)    │
-         └─────────────┬──────────────┘
-                       │
-         ┌─────────────▼──────────────┐
-         │   Config                   │
-         │   src/config/api.ts        │
-         │   - BASE_URL, USE_MOCK     │
-         └────────────────────────────┘
-```
+Create two markdown documents that give a backend developer everything needed to build the REST API that powers the Puller AI Command Center frontend.
 
 ## Files to Create
 
-### 1. `src/config/api.ts` — API Configuration
-- Exports `API_BASE_URL` from `import.meta.env.VITE_API_BASE_URL` with fallback to `""`.
-- Exports `USE_MOCK_DATA` flag (`import.meta.env.VITE_USE_MOCK_DATA !== 'false'`) — defaults to `true` so the app keeps working with demo data until a real backend is connected.
+### 1. `API_DOCUMENTATION.md` — Full API Reference
 
-### 2. `src/services/api/client.ts` — HTTP Client
-- A thin `apiClient` wrapper around `fetch` that:
-  - Prepends `API_BASE_URL`
-  - Attaches `Authorization: Bearer <token>` from stored auth token
-  - Sets `Content-Type: application/json`
-  - Handles response parsing and error normalization
-  - Exports typed `get`, `post`, `put`, `delete` methods
+Complete endpoint specification covering all three domains:
 
-### 3. `src/services/api/types.ts` — API DTOs
-- Request/response type definitions that map to the backend contract (separate from internal UI types).
-- Includes: `LoginRequest`, `LoginResponse`, `TaskListResponse`, `TaskDetailResponse`, `ContextItemRequest`, `ContextItemResponse`, etc.
+**Authentication (3 endpoints)**
+- `POST /auth/login` — Email/password login, returns JWT + user object
+- `POST /auth/logout` — Invalidate session (requires auth)
+- `GET /auth/session` — Validate current token, return user
 
-### 4. `src/services/api/authApi.ts` — Auth Service
-- `login(email, password)` → POST `/auth/login` → returns `{ token, user }`
-- `logout()` → POST `/auth/logout`
-- `getSession()` → GET `/auth/session`
-- When `USE_MOCK_DATA` is true, returns hardcoded demo credentials logic (current behavior).
+**Tasks (4 endpoints)**
+- `GET /tasks` — List all tasks (with optional filters by status, priority, industry)
+- `GET /tasks/:id` — Full task detail including messages, SQL code, annotations, table data, response message, assumptions
+- `PATCH /tasks/:id/status` — Update task pipeline status
+- `POST /tasks/:id/send` — Send response to requestor with selected assumptions
 
-### 5. `src/services/api/tasksApi.ts` — Tasks Service
-- `fetchTasks()` → GET `/tasks`
-- `fetchTaskById(id)` → GET `/tasks/:id` (returns task data with messages, code, annotations)
-- `updateTaskStatus(id, status)` → PATCH `/tasks/:id/status`
-- `sendToRequestor(id, message, assumptions)` → POST `/tasks/:id/send`
-- When `USE_MOCK_DATA` is true, returns current demo data.
+**Context Hub (4 endpoints)**
+- `GET /context` — List all context items
+- `POST /context` — Add a new context item (chat input, upload, screen recording)
+- `DELETE /context/:id` — Remove a context item
+- `POST /context/connect` — Register an external API connection
 
-### 6. `src/services/api/contextApi.ts` — Context Hub Service
-- `fetchContextItems()` → GET `/context`
-- `addContextItem(item)` → POST `/context`
-- `deleteContextItem(id)` → DELETE `/context/:id`
-- `connectApi(config)` → POST `/context/connect`
-- When `USE_MOCK_DATA` is true, returns current demo items.
+For each endpoint the document will include:
+- Method and path
+- Request headers (Authorization)
+- Request body JSON schema with field types and constraints
+- Response body JSON schema
+- Error response format (`{ status, message }`)
+- Example request/response pairs using realistic demo data
 
-### 7. `src/services/api/index.ts` — Barrel export
+**Enums and constants** section documenting all valid values:
+- Task statuses: `ingesting | asserting | planning | building | validating | generating | review | sent | approved | learning`
+- Task sources: `email | slack | meeting`
+- Priorities: `low | medium | high`
+- Industry verticals: `retail-ecommerce | grocery-mass-merch | cpg-consumer-brands | hospitality-restaurants | fashion-shoes | media-entertainment`
+- Sent statuses: `pending | viewed | awaiting_response`
+- Context item types: `entity | rule | fact`
+- Context sources: `upload | chat | api | screen-record`
+- Context statuses: `pending | processed | error`
+- SQL annotation types: `selection | source | aggregation | filter | grouping | ordering | expert`
 
-## Files to Create (React Query Hooks)
+### 2. `BACKEND_HANDOFF.md` — Developer Handoff Guide
 
-### 8. `src/hooks/api/useTasks.ts`
-- `useTasksQuery()` — wraps `fetchTasks` with React Query, returns `{ data, isLoading, error }`
-- `useTaskDataQuery(taskId)` — wraps `fetchTaskById`
-- `useSendToRequestorMutation()` — wraps `sendToRequestor`
-- When mock mode is on, returns current state from demo data instead of fetching.
+Practical guide for the backend developer covering:
 
-### 9. `src/hooks/api/useContextItemsQuery.ts`
-- `useContextItemsQuery()` — wraps `fetchContextItems`
-- `useAddContextMutation()` — wraps `addContextItem`
+- **Project context**: What Puller AI does, how the frontend works, what the backend needs to serve
+- **Architecture diagram**: Frontend service layer → API → Backend
+- **Authentication requirements**: JWT-based auth, token format expectations, how the frontend stores/sends tokens
+- **Data model overview**: Entity relationships (Tasks, Messages, Code, Annotations, Context Items, Users)
+- **Task pipeline logic**: The 10-stage pipeline and what each status means, confidence threshold (80) triggering expert review
+- **Environment setup**: The frontend expects `VITE_API_BASE_URL` and `VITE_USE_MOCK_DATA=false` to switch from demo to live
+- **CORS requirements**: Frontend origin needs to be whitelisted
+- **Error contract**: All errors must return `{ status: number, message: string }`
+- **Frontend code references**: Pointers to `src/services/api/` files where the backend contract is consumed
+- **Testing approach**: Set `VITE_USE_MOCK_DATA=false` and `VITE_API_BASE_URL` to test against the real backend — the frontend will automatically switch from demo data to live API calls
 
-### 10. `src/hooks/api/index.ts` — Barrel export
+## No Existing Files Modified
 
-## Files to Modify
-
-### 11. `src/hooks/useAuth.ts`
-- Replace `sessionStorage` calls with `authApi.login()` / `authApi.logout()`.
-- Store token from API response; attach to subsequent requests via the client.
-- Keep backward-compatible interface (`isAuthenticated`, `userEmail`, `logout`, `requireAuth`).
-
-### 12. `src/pages/Login.tsx`
-- Replace inline credential check with `authApi.login(email, password)`.
-- On success, store the returned token (used by `client.ts`).
-
-### 13. `src/pages/Index.tsx`
-- No changes initially. The simulation hook and demo data continue to work in mock mode.
-- Add a comment/TODO showing where to swap `initialTasks` with `useTasksQuery()` when ready.
-
-### 14. `src/hooks/useContextHub.ts`
-- Add conditional: if `!USE_MOCK_DATA`, call `contextApi` methods instead of managing local state.
-- Keep existing demo behavior as the default.
-
-## Environment Variables
-
-Add to project (via `.env` or Lovable secrets when connected to Cloud):
-
-```
-VITE_API_BASE_URL=https://your-api.example.com
-VITE_USE_MOCK_DATA=true
-```
-
-## Technical Details
-
-- **Zero breaking changes**: The `USE_MOCK_DATA` flag defaults to `true`, so the app works identically until a real backend URL is configured.
-- **React Query** is already installed — used for caching, refetching, and loading/error states.
-- **Token storage**: Use `localStorage` for the JWT token (read by `client.ts` on every request). The auth hook clears it on logout.
-- **API error handling**: The client normalizes errors into `{ status, message }` objects that hooks can surface via toast notifications.
-- **Type mapping**: API DTOs are converted to internal types (e.g., `Task`, `ContextItem`) at the service layer boundary, keeping UI components unchanged.
+These are standalone documentation files at the project root, alongside the existing `ARCHITECTURE.md` and `README.md`.
 
